@@ -4,6 +4,7 @@ import { swaggerSpec } from './swagger/swagger';
 import { errorHandler } from './middlewares/error.middleware';
 import authRoutes from './routers/auth.router';
 import userRoutes from './routers/user.router';
+import portfolioRoutes from './routers/portfolio.router';
 import cors from 'cors';
 
 const app: Express = express();
@@ -25,6 +26,7 @@ app.get('/health', (req: Request, res: Response) => {
 // TODO: Import and use routers
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
+app.use('/portfolios', portfolioRoutes);
 
 // Global Error Handler Middleware
 app.use(errorHandler);
