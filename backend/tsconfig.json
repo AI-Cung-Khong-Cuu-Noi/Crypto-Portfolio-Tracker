@@ -13,7 +13,12 @@
     "declaration": true,
     "declarationMap": true,
     "types": [
-      "node"
+      "node",
+      "express"
+    ],
+    "typeRoots": [
+      "./scr/types",
+      "./node_modules/@types"
     ],
     "forceConsistentCasingInFileNames": true
   },

@@ -50,7 +50,7 @@ Frontend:
 Trang đăng ký (email, password, full name)
 Trang đăng nhập (email + password)
 Xác thực OTP (đăng ký / reset password)
-Trang Profile (avatar, thông tin cá nhân, settings, 2FA)
+Trang Profile (avatar(url), thông tin cá nhân, settings, 2FA)
 
 Backend API:
 
@@ -59,13 +59,15 @@ POST /auth/login
 POST /auth/verify-otp
 POST /auth/resend-otp
 POST /auth/forgot-password
+POST /auth/reset-password
 GET /users/me
 PUT /users/me
+PUT /users/password
 
 Database:
 
-users: _id, email, password (hashed), name, avatar, role (user/admin), status (active/inactive/suspended), lastLoginAt, createdAt, updatedAt
-otpTokens: _id, userId, otp, purpose, expiresAt, used
+users: _id, email, password (hashed), name, avatar(url), role (USER/ADMIN), status (PENDING/ACTIVE/BANNED), createdAt, updatedAt.
+otpTokens: _id, userId, otp, expiresAt.
 
 2.2 Quản lý Portfolio
 Mô tả: Người dùng có thể tạo và quản lý nhiều portfolio (Spot, Futures, Long-term, v.v.).
@@ -108,7 +110,7 @@ DELETE /transactions/:id
 
 Database:
 
-transactions: _id, userId, portfolioId, type (Buy/Sell/Transfer), symbol, amount, price, fee, totalValue, exchange, date, note, createdAt
+transactions: _id, userId, portfolioId, type (Buy/Sell/Transfer), symbol, amount, price, fee, totalValue, exchange, date, note, createdAt, updatedAt
 
 2.5 Dashboard & Phân tích
 Frontend:
@@ -238,5 +240,5 @@ transactions
 watchlists
 alerts
 otpTokens
-coins (mới)
+coins
 adminLogs (tùy chọn: adminId, action, entityType, entityId, details, timestamp)
