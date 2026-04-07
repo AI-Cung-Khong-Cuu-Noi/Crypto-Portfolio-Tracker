@@ -290,7 +290,7 @@ export default function PortfolioDetail() {
                             {formatCurrency(holding.unrealizedPnL)}
                           </td>
                           <td className={`text-right py-3 px-4 font-semibold ${getColorClass(holding.change24h)}`}>
-                            {(holding.change24h * 100).toFixed(2)}%
+                            {holding.change24h.toFixed(2)}%
                           </td>
                         </tr>
                       ))}
