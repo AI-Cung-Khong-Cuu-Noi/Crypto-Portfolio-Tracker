@@ -40,7 +40,7 @@ export default function Sidebar() {
             CP
           </div>
           <div>
-            <h1 className='font-bold text-lg text-gray-900'>CryptoMgmt</h1>
+            <h1 className='font-bold text-lg text-gray-900'>Cryfo Tracker</h1>
           </div>
         </div>
       </div>
