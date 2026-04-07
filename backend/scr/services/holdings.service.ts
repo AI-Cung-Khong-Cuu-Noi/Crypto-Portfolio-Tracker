@@ -9,7 +9,7 @@ export type AggregatedPosition = {
   averageCostUsd: number;
 };
 
-function buyCost(tx: ITransaction): number {
+export function buyCost(tx: ITransaction): number {
   const fee = tx.fee ?? 0;
   if (tx.totalValue != null && !Number.isNaN(tx.totalValue)) {
     return tx.totalValue;
@@ -18,7 +18,7 @@ function buyCost(tx: ITransaction): number {
   return tx.amount * price + fee;
 }
 
-function sellProceedsUsd(tx: ITransaction): number {
+export function sellProceedsUsd(tx: ITransaction): number {
   const fee = tx.fee ?? 0;
   if (tx.totalValue != null && !Number.isNaN(tx.totalValue)) {
     return tx.totalValue;
