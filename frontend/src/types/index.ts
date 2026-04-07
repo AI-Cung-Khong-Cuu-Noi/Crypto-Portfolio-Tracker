@@ -135,17 +135,56 @@ export interface LoginResponse {
   message?: string;
 }
 
-export interface ReportSummary {
-  period: 'DAY' | 'MONTH' | 'YEAR';
-  realizedPnL: number;
-  unrealizedPnL: number;
-  trades: number;
-  topCoin: string;
+export interface ReportSummaryBucket {
+  period: string;
+  tradeCount: number;
+  buyVolumeUsd: number;
+  sellVolumeUsd: number;
+  realizedPnlUsd: number;
 }
 
-export interface TaxReport {
-  symbol: string;
-  realizedPnL: number;
-  trades: number;
+export interface ReportSummaryResponse {
+  portfolioId: string | null;
+  granularity: 'day' | 'month' | 'year';
+  from: string;
+  to: string;
+  buckets: ReportSummaryBucket[];
+  totals: {
+    tradeCount: number;
+    buyVolumeUsd: number;
+    sellVolumeUsd: number;
+    realizedPnlUsd: number;
+  };
+}
+
+export interface TaxRealizedLine {
+  transactionId: string;
+  portfolioId: string;
   date: string;
+  symbol: string;
+  amountSold: number;
+  proceedsUsd: number;
+  costBasisUsd: number;
+  realizedPnlUsd: number;
+  exchange: string;
+}
+
+export interface ReportByCoinRow {
+  symbol: string;
+  buyVolumeUsd: number;
+  sellVolumeUsd: number;
+  realizedPnlUsdLifetime: number;
+  realizedPnlUsdInRange?: number;
+  buyCount: number;
+  sellCount: number;
+  transferInCount: number;
+  transferOutCount: number;
+  currentQuantity: number;
+  costBasisUsd: number;
+  averageCostUsd: number;
+  currentPriceUsd?: number | null;
+  change24hPercent?: number | null;
+  valueUsd?: number | null;
+  unrealizedPnlUsd?: number | null;
+  coinGeckoId?: string | null;
 }
