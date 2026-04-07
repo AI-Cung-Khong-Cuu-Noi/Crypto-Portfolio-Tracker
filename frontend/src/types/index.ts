@@ -3,7 +3,8 @@ export interface User {
   email: string;
   name: string;
   role: 'USER' | 'ADMIN';
-  status: 'ACTIVE' | 'INACTIVE';
+  status: 'PENDING' | 'ACTIVE' | 'BANNED';
+  avatar?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -91,30 +92,45 @@ export interface Notification {
 }
 
 export interface DashboardSummary {
-  totalPortfolioValue: number;
-  totalUnrealizedPnL: number;
-  totalRealizedPnL: number;
+  totalMarketValueUsd: number;
+  totalCostBasisUsd: number;
+  totalUnrealizedPnlUsd: number;
+  totalRealizedPnlUsd: number;
+  totalPnlUsd: number;
   portfolioCount: number;
-  topGainers: Holding[];
-  topLosers: Holding[];
+  holdingsCount: number;
+  topGainers: Array<{
+    symbol: string;
+    quantity: number;
+    valueUsd: number | null;
+    unrealizedPnlUsd: number | null;
+    change24hPercent: number | null;
+  }>;
+  topLosers: Array<{
+    symbol: string;
+    quantity: number;
+    valueUsd: number | null;
+    unrealizedPnlUsd: number | null;
+    change24hPercent: number | null;
+  }>;
 }
 
 export interface PerformanceData {
   date: string;
-  marketValue: number;
-  costBasis: number;
+  totalMarketValueUsd: number;
+  totalCostBasisUsd: number;
 }
 
 export interface AllocationData {
   symbol: string;
-  value: number;
-  percentage: number;
+  valueUsd: number;
+  percent: number;
 }
 
 export interface TrendCoin {
   symbol: string;
-  change24h: number;
-  currentPrice: number;
+  change24h: number | null;
+  currentPrice: number | null;
 }
 
 export interface LoginResponse {

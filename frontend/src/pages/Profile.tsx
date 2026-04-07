@@ -9,7 +9,6 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [editName, setEditName] = useState('');
-  const [editEmail, setEditEmail] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -27,9 +26,9 @@ export default function Profile() {
   }
 
   const handleUpdateProfile = () => {
-    if (editName && editEmail) {
+    if (editName) {
       updateProfile(
-        { name: editName, email: editEmail },
+        { name: editName },
         {
           onSuccess: () => {
             setIsEditing(false);
@@ -50,7 +49,7 @@ export default function Profile() {
     }
 
     changePassword(
-      { currentPassword, newPassword },
+      { oldPassword: currentPassword, newPassword },
       {
         onSuccess: () => {
           setIsChangingPassword(false);
@@ -99,7 +98,6 @@ export default function Profile() {
               <Button
                 onClick={() => {
                   setEditName(profile.name);
-                  setEditEmail(profile.email);
                   setIsEditing(true);
                 }}
               >
@@ -117,18 +115,6 @@ export default function Profile() {
                   className='mt-1'
                 />
               </div>
-
-              <div>
-                <Label htmlFor='edit-email'>Email</Label>
-                <Input
-                  id='edit-email'
-                  type='email'
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                  className='mt-1'
-                />
-              </div>
-
               <div className='flex gap-2'>
                 <Button
                   onClick={handleUpdateProfile}

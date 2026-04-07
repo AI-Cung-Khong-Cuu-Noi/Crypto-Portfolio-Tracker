@@ -28,7 +28,7 @@ export default function Dashboard() {
               <div>
                 <p className='text-sm text-gray-500'>Total Portfolio Value</p>
                 <p className='text-2xl font-bold text-gray-900 mt-1'>
-                  {formatCurrency(summary?.totalPortfolioValue || 0)}
+                  {formatCurrency(summary?.totalMarketValueUsd || 0)}
                 </p>
               </div>
               <div className='w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center'>
@@ -43,14 +43,14 @@ export default function Dashboard() {
             <div className='flex items-center justify-between'>
               <div>
                 <p className='text-sm text-gray-500'>Unrealized P&L</p>
-                <p className={`text-2xl font-bold mt-1 ${getColorClass(summary?.totalUnrealizedPnL || 0)}`}>
-                  {formatCurrency(summary?.totalUnrealizedPnL || 0)}
+                <p className={`text-2xl font-bold mt-1 ${getColorClass(summary?.totalUnrealizedPnlUsd || 0)}`}>
+                  {formatCurrency(summary?.totalUnrealizedPnlUsd || 0)}
                 </p>
               </div>
               <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                (summary?.totalUnrealizedPnL || 0) >= 0 ? 'bg-green-100' : 'bg-red-100'
+                (summary?.totalUnrealizedPnlUsd || 0) >= 0 ? 'bg-green-100' : 'bg-red-100'
               }`}>
-                {(summary?.totalUnrealizedPnL || 0) >= 0 ? (
+                {(summary?.totalUnrealizedPnlUsd || 0) >= 0 ? (
                   <TrendingUp className='text-green-600' size={24} />
                 ) : (
                   <TrendingDown className='text-red-600' size={24} />
@@ -65,14 +65,14 @@ export default function Dashboard() {
             <div className='flex items-center justify-between'>
               <div>
                 <p className='text-sm text-gray-500'>Realized P&L</p>
-                <p className={`text-2xl font-bold mt-1 ${getColorClass(summary?.totalRealizedPnL || 0)}`}>
-                  {formatCurrency(summary?.totalRealizedPnL || 0)}
+                <p className={`text-2xl font-bold mt-1 ${getColorClass(summary?.totalRealizedPnlUsd || 0)}`}>
+                  {formatCurrency(summary?.totalRealizedPnlUsd || 0)}
                 </p>
               </div>
               <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                (summary?.totalRealizedPnL || 0) >= 0 ? 'bg-green-100' : 'bg-red-100'
+                (summary?.totalRealizedPnlUsd || 0) >= 0 ? 'bg-green-100' : 'bg-red-100'
               }`}>
-                {(summary?.totalRealizedPnL || 0) >= 0 ? (
+                {(summary?.totalRealizedPnlUsd || 0) >= 0 ? (
                   <TrendingUp className='text-green-600' size={24} />
                 ) : (
                   <TrendingDown className='text-red-600' size={24} />
@@ -127,8 +127,8 @@ export default function Dashboard() {
                   <YAxis />
                   <Tooltip formatter={(value) => formatCurrency(value as number)} />
                   <Legend />
-                  <Line type='monotone' dataKey='marketValue' stroke='#3b82f6' name='Market Value' />
-                  <Line type='monotone' dataKey='costBasis' stroke='#10b981' name='Cost Basis' />
+                  <Line type='monotone' dataKey='totalMarketValueUsd' stroke='#3b82f6' name='Market Value' />
+                  <Line type='monotone' dataKey='totalCostBasisUsd' stroke='#10b981' name='Cost Basis' />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
@@ -152,10 +152,10 @@ export default function Dashboard() {
                     cx='50%'
                     cy='50%'
                     labelLine={false}
-                    label={({ symbol, percentage }) => `${symbol} ${(percentage * 100).toFixed(1)}%`}
+                    label={({ symbol, percent }) => `${symbol} ${(percent || 0).toFixed(1)}%`}
                     outerRadius={80}
                     fill='#8884d8'
-                    dataKey='value'
+                    dataKey='valueUsd'
                   >
                     {allocation.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -183,12 +183,12 @@ export default function Dashboard() {
                     <div>
                       <p className='font-medium text-gray-900'>{coin.symbol}</p>
                       <p className='text-sm text-gray-600'>
-                        {coin.quantity} • {formatCurrency(coin.totalValue)}
+                        {coin.quantity} • {formatCurrency(coin.valueUsd || 0)}
                       </p>
                     </div>
                     <div className='text-right'>
-                      <p className='font-medium text-green-600'>+{(coin.unrealizedPnLPercent * 100).toFixed(2)}%</p>
-                      <p className='text-sm text-green-600'>{formatCurrency(coin.unrealizedPnL)}</p>
+                      <p className='font-medium text-green-600'>+{(coin.change24hPercent || 0).toFixed(2)}%</p>
+                      <p className='text-sm text-green-600'>{formatCurrency(coin.unrealizedPnlUsd || 0)}</p>
                     </div>
                   </div>
                 ))}
@@ -211,12 +211,12 @@ export default function Dashboard() {
                     <div>
                       <p className='font-medium text-gray-900'>{coin.symbol}</p>
                       <p className='text-sm text-gray-600'>
-                        {coin.quantity} • {formatCurrency(coin.totalValue)}
+                        {coin.quantity} • {formatCurrency(coin.valueUsd || 0)}
                       </p>
                     </div>
                     <div className='text-right'>
-                      <p className='font-medium text-red-600'>{(coin.unrealizedPnLPercent * 100).toFixed(2)}%</p>
-                      <p className='text-sm text-red-600'>{formatCurrency(coin.unrealizedPnL)}</p>
+                      <p className='font-medium text-red-600'>{(coin.change24hPercent || 0).toFixed(2)}%</p>
+                      <p className='text-sm text-red-600'>{formatCurrency(coin.unrealizedPnlUsd || 0)}</p>
                     </div>
                   </div>
                 ))}
@@ -243,7 +243,7 @@ export default function Dashboard() {
                   trend.gainers.slice(0, 5).map((coin) => (
                     <div key={coin.symbol} className='flex items-center justify-between p-2'>
                       <span className='font-medium'>{coin.symbol}</span>
-                      <span className='text-green-600 font-medium'>+{(coin.change24h * 100).toFixed(2)}%</span>
+                      <span className='text-green-600 font-medium'>+{(coin.change24h || 0).toFixed(2)}%</span>
                     </div>
                   ))
                 ) : (
@@ -266,7 +266,7 @@ export default function Dashboard() {
                   trend.losers.slice(0, 5).map((coin) => (
                     <div key={coin.symbol} className='flex items-center justify-between p-2'>
                       <span className='font-medium'>{coin.symbol}</span>
-                      <span className='text-red-600 font-medium'>{(coin.change24h * 100).toFixed(2)}%</span>
+                      <span className='text-red-600 font-medium'>{(coin.change24h || 0).toFixed(2)}%</span>
                     </div>
                   ))
                 ) : (
