@@ -20,8 +20,7 @@ export const usePortfolioDetail = (id: string | undefined) => {
 export const useCreatePortfolio = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { name: string; description?: string; baseCurrency: string }) =>
-      portfoliosAPI.create(data),
+    mutationFn: (data: { name: string; description?: string }) => portfoliosAPI.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['portfolios'] });
       toast.success('Portfolio created successfully');

@@ -23,11 +23,6 @@ export interface Portfolio {
   userId: string;
   name: string;
   description?: string;
-  baseCurrency: string;
-  totalCost: number;
-  totalValue: number;
-  totalUnrealizedPnL: number;
-  realizedPnL: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -40,6 +35,7 @@ export interface Transaction {
   quantity: number;
   price: number;
   fee?: number;
+  totalValue?: number;
   date: string;
   notes?: string;
   createdAt: string;
