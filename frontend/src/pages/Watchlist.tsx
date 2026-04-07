@@ -10,6 +10,7 @@ import { useState } from 'react';
 export default function Watchlist() {
   const [isOpen, setIsOpen] = useState(false);
   const [symbol, setSymbol] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const { data: watchlist, isLoading } = useWatchlist();
   const { mutate: addToWatchlist, isPending: isAdding } = useAddToWatchlist();
   const { mutate: removeFromWatchlist, isPending: isRemoving } = useRemoveFromWatchlist();
@@ -83,14 +84,14 @@ export default function Watchlist() {
                       <td className='py-3 px-4 font-medium text-gray-900'>{coin.symbol}</td>
                       <td className='text-right py-3 px-4 text-gray-600'>{formatCurrency(coin.price)}</td>
                       <td className={`text-right py-3 px-4 font-semibold ${getColorClass(coin.change24h)}`}>
-                        {(coin.change24h * 100).toFixed(2)}%
+                        {coin.change24h.toFixed(2)}%
                       </td>
                       <td className='text-right py-3 px-4 text-gray-600'>
                         {coin.marketCap ? formatCurrency(coin.marketCap) : 'N/A'}
                       </td>
                       <td className='text-right py-3 px-4'>
                         <button
-                          onClick={() => removeFromWatchlist(coin.id)}
+                          onClick={() => setDeletingId(coin.id)}
                           disabled={isRemoving}
                           className='text-red-600 hover:text-red-700'
                         >
@@ -117,6 +118,34 @@ export default function Watchlist() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!deletingId} onOpenChange={(open) => !open && setDeletingId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete from Watchlist?</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xóa coin này khỏi watchlist không?
+            </DialogDescription>
+          </DialogHeader>
+          <div className='flex justify-end gap-2'>
+            <Button variant='outline' onClick={() => setDeletingId(null)} disabled={isRemoving}>
+              Cancel
+            </Button>
+            <Button
+              variant='destructive'
+              disabled={!deletingId || isRemoving}
+              onClick={() => {
+                if (!deletingId) return;
+                removeFromWatchlist(deletingId, {
+                  onSuccess: () => setDeletingId(null),
+                });
+              }}
+            >
+              {isRemoving ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
