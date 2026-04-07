@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePortfolioDetail, usePortfolioHoldings, useUpdatePortfolio, useDeletePortfolio } from '../../hooks/usePortfolio';
-import { useTransactions, useCreateTransaction, useUpdateTransaction, useDeleteTransaction } from '../../hooks/useTransaction';
+import { useTransactions, useCreateTransaction, useDeleteTransaction } from '../../hooks/useTransaction';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -8,7 +8,6 @@ import { Label } from '../../components/ui/Label';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -20,7 +19,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { formatCurrency, getColorClass } from '../../utils/format';
 import { useState } from 'react';
-import { formatDistanceToNow } from 'date-fns';
 
 const transactionSchema = z.object({
   symbol: z.string().min(1, 'Symbol is required'),
@@ -39,9 +37,12 @@ export default function PortfolioDetail() {
   const navigate = useNavigate();
   const [isTransactionOpen, setIsTransactionOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   const { data: portfolio, isLoading: portfolioLoading } = usePortfolioDetail(id);
-  const { data: holdings, isLoading: holdingsLoading } = usePortfolioHoldings(id);
+  const { data: holdingsData, isLoading: holdingsLoading } = usePortfolioHoldings(id);
+  const holdings = holdingsData?.holdings;
+  const holdingsSummary = holdingsData?.summary;
   const { data: transactions, isLoading: transactionsLoading } = useTransactions(1, 10, id);
   const { mutate: updatePortfolio, isPending: isUpdating } = useUpdatePortfolio();
   const { mutate: deletePortfolio, isPending: isDeleting } = useDeletePortfolio();
@@ -63,7 +64,10 @@ export default function PortfolioDetail() {
   const handleDelete = () => {
     if (!id) return;
     deletePortfolio(id, {
-      onSuccess: () => navigate('/portfolios'),
+      onSuccess: () => {
+        setIsDeleteOpen(false);
+        navigate('/portfolios');
+      },
     });
   };
 
@@ -128,8 +132,8 @@ export default function PortfolioDetail() {
                   updatePortfolio({
                     id: portfolio.id,
                     data: {
-                      name: formData.get('name') as string,
-                      description: formData.get('description') as string,
+                      name: (formData.get('name') as string) || portfolio.name,
+                      description: (formData.get('description') as string) ?? '',
                     },
                   }, {
                     onSuccess: () => setIsEditOpen(false),
@@ -162,15 +166,30 @@ export default function PortfolioDetail() {
             </DialogContent>
           </Dialog>
 
-          <Button
-            variant='destructive'
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className='flex items-center gap-2'
-          >
-            <Trash2 size={18} />
-            Delete
-          </Button>
+          <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+            <DialogTrigger asChild>
+              <Button variant='destructive' className='flex items-center gap-2'>
+                <Trash2 size={18} />
+                Delete
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete Portfolio?</DialogTitle>
+              </DialogHeader>
+              <p className='text-sm text-gray-500'>
+                Bạn có chắc chắn muốn xóa portfolio này không? Hành động này không thể hoàn tác.
+              </p>
+              <div className='flex justify-end gap-2'>
+                <Button variant='outline' onClick={() => setIsDeleteOpen(false)} disabled={isDeleting}>
+                  Cancel
+                </Button>
+                <Button variant='destructive' onClick={handleDelete} disabled={isDeleting}>
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -179,7 +198,7 @@ export default function PortfolioDetail() {
           <CardContent className='pt-6'>
             <p className='text-sm text-gray-500'>Total Value</p>
             <p className='text-2xl font-bold text-gray-900 mt-1'>
-              {formatCurrency(portfolio.totalValue)}
+              {formatCurrency(holdingsSummary?.totalMarketValueUsd ?? 0)}
             </p>
           </CardContent>
         </Card>
@@ -187,15 +206,15 @@ export default function PortfolioDetail() {
           <CardContent className='pt-6'>
             <p className='text-sm text-gray-500'>Total Cost</p>
             <p className='text-2xl font-bold text-gray-900 mt-1'>
-              {formatCurrency(portfolio.totalCost)}
+              {formatCurrency(holdingsSummary?.totalCostBasisUsd ?? 0)}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className='pt-6'>
             <p className='text-sm text-gray-500'>Unrealized P&L</p>
-            <p className={`text-2xl font-bold mt-1 ${getColorClass(portfolio.totalUnrealizedPnL)}`}>
-              {formatCurrency(portfolio.totalUnrealizedPnL)}
+            <p className={`text-2xl font-bold mt-1 ${getColorClass(holdingsSummary?.totalUnrealizedPnlUsd ?? 0)}`}>
+              {formatCurrency(holdingsSummary?.totalUnrealizedPnlUsd ?? 0)}
             </p>
           </CardContent>
         </Card>
@@ -395,7 +414,11 @@ export default function PortfolioDetail() {
                           <td className='text-right py-3 px-4 text-gray-600'>{tx.quantity.toFixed(4)}</td>
                           <td className='text-right py-3 px-4 text-gray-600'>{formatCurrency(tx.price)}</td>
                           <td className='text-right py-3 px-4 font-semibold text-gray-900'>
-                            {formatCurrency(tx.quantity * tx.price)}
+                            {formatCurrency(
+                              tx.totalValue != null
+                                ? tx.totalValue
+                                : tx.quantity * tx.price
+                            )}
                           </td>
                           <td className='py-3 px-4 text-gray-600'>{new Date(tx.date).toLocaleDateString()}</td>
                           <td className='text-right py-3 px-4'>

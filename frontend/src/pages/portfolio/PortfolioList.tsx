@@ -1,5 +1,5 @@
 import { usePortfolios, useCreatePortfolio, useDeletePortfolio } from '../../hooks/usePortfolio';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
+import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Label } from '../../components/ui/Label';
@@ -16,19 +16,18 @@ import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { formatCurrency, getColorClass } from '../../utils/format';
 import { useState } from 'react';
 
 const createPortfolioSchema = z.object({
   name: z.string().min(1, 'Portfolio name is required'),
   description: z.string().optional(),
-  baseCurrency: z.string().default('USD'),
 });
 
 type CreatePortfolioForm = z.infer<typeof createPortfolioSchema>;
 
 export default function PortfolioList() {
   const [isOpen, setIsOpen] = useState(false);
+  const [deletePortfolioId, setDeletePortfolioId] = useState<string | null>(null);
   const { data: portfolios, isLoading } = usePortfolios();
   const { mutate: createPortfolio, isPending: isCreating } = useCreatePortfolio();
   const { mutate: deletePortfolio, isPending: isDeleting } = useDeletePortfolio();
@@ -48,6 +47,13 @@ export default function PortfolioList() {
         reset();
         setIsOpen(false);
       },
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletePortfolioId) return;
+    deletePortfolio(deletePortfolioId, {
+      onSuccess: () => setDeletePortfolioId(null),
     });
   };
 
@@ -94,19 +100,6 @@ export default function PortfolioList() {
                 />
               </div>
 
-              <div>
-                <Label htmlFor='baseCurrency'>Base Currency</Label>
-                <select
-                  id='baseCurrency'
-                  {...register('baseCurrency')}
-                  className='mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500'
-                >
-                  <option value='USD'>USD</option>
-                  <option value='EUR'>EUR</option>
-                  <option value='GBP'>GBP</option>
-                </select>
-              </div>
-
               <Button type='submit' className='w-full' disabled={isCreating}>
                 Create Portfolio
               </Button>
@@ -128,7 +121,7 @@ export default function PortfolioList() {
                     )}
                   </div>
                   <button
-                    onClick={() => deletePortfolio(portfolio.id)}
+                    onClick={() => setDeletePortfolioId(portfolio.id)}
                     disabled={isDeleting}
                     className='p-2 hover:bg-red-50 rounded-lg transition-colors'
                   >
@@ -136,28 +129,9 @@ export default function PortfolioList() {
                   </button>
                 </div>
 
-                <div className='space-y-3 mb-4'>
-                  <div>
-                    <p className='text-xs text-gray-500'>Total Value</p>
-                    <p className='text-xl font-bold text-gray-900'>
-                      {formatCurrency(portfolio.totalValue)}
-                    </p>
-                  </div>
-                  <div className='grid grid-cols-2 gap-4'>
-                    <div>
-                      <p className='text-xs text-gray-500'>Cost Basis</p>
-                      <p className='font-semibold text-gray-900'>
-                        {formatCurrency(portfolio.totalCost)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className='text-xs text-gray-500'>Unrealized P&L</p>
-                      <p className={`font-semibold ${getColorClass(portfolio.totalUnrealizedPnL)}`}>
-                        {formatCurrency(portfolio.totalUnrealizedPnL)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <p className='text-xs text-gray-500 mb-4'>
+                  Created {new Date(portfolio.createdAt).toLocaleDateString()}
+                </p>
 
                 <Link to={`/portfolios/${portfolio.id}`}>
                   <Button variant='outline' className='w-full flex items-center justify-center gap-2'>
@@ -184,6 +158,25 @@ export default function PortfolioList() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={!!deletePortfolioId} onOpenChange={(open) => !open && setDeletePortfolioId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Portfolio?</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xóa portfolio này không? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <div className='flex justify-end gap-2'>
+            <Button variant='outline' onClick={() => setDeletePortfolioId(null)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button variant='destructive' onClick={handleConfirmDelete} disabled={isDeleting}>
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

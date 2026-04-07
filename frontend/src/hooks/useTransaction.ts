@@ -60,6 +60,7 @@ export const useDeleteTransaction = () => {
     mutationFn: (id: string) => transactionsAPI.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['holdings'] });
       toast.success('Transaction deleted successfully');
     },
     onError: (error: any) => {
