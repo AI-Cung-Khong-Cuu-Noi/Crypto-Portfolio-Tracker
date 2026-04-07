@@ -10,6 +10,7 @@ import dashboardRoutes from './routers/dashboard.router';
 import watchlistRoutes from './routers/watchlist.router';
 import alertRoutes from './routers/alert.router';
 import notificationRoutes from './routers/notification.router';
+import reportsRoutes from './routers/reports.router';
 import cors from 'cors';
 
 const app: Express = express();
@@ -37,6 +38,7 @@ app.use('/dashboard', dashboardRoutes);
 app.use('/watchlist', watchlistRoutes);
 app.use('/alerts', alertRoutes);
 app.use('/notifications', notificationRoutes);
+app.use('/reports', reportsRoutes);
 
 // Global Error Handler Middleware
 app.use(errorHandler);
