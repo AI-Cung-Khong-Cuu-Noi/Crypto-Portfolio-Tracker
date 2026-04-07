@@ -20,6 +20,7 @@ type AlertForm = z.infer<typeof alertSchema>;
 
 export default function Alerts() {
   const [isOpen, setIsOpen] = useState(false);
+  const [deletingAlertId, setDeletingAlertId] = useState<string | null>(null);
   const { data: alerts, isLoading } = useAlerts();
   const { mutate: createAlert, isPending: isCreating } = useCreateAlert();
   const { mutate: updateAlert, isPending: isUpdating } = useUpdateAlert();
@@ -156,7 +157,7 @@ export default function Alerts() {
                       {alert.isActive ? 'Disable' : 'Enable'}
                     </button>
                     <button
-                      onClick={() => deleteAlert(alert.id)}
+                      onClick={() => setDeletingAlertId(alert.id)}
                       disabled={isDeleting}
                       className='p-2 hover:bg-red-50 rounded-lg transition-colors'
                     >
@@ -181,6 +182,34 @@ export default function Alerts() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!deletingAlertId} onOpenChange={(open) => !open && setDeletingAlertId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Alert?</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xóa cảnh báo này không?
+            </DialogDescription>
+          </DialogHeader>
+          <div className='flex justify-end gap-2'>
+            <Button variant='outline' onClick={() => setDeletingAlertId(null)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button
+              variant='destructive'
+              disabled={!deletingAlertId || isDeleting}
+              onClick={() => {
+                if (!deletingAlertId) return;
+                deleteAlert(deletingAlertId, {
+                  onSuccess: () => setDeletingAlertId(null),
+                });
+              }}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
