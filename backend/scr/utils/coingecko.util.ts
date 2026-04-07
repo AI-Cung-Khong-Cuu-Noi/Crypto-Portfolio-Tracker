@@ -71,3 +71,27 @@ export async function fetchUsdQuotesByCoinIds(
   }
   return (await res.json()) as Record<string, CoinGeckoUsdQuote>;
 }
+
+export type CoinGeckoMarketRow = {
+  id: string;
+  symbol: string;
+  name: string;
+  image: string;
+  current_price: number | null;
+  price_change_percentage_24h: number | null;
+  market_cap?: number;
+  total_volume?: number;
+};
+
+export async function fetchUsdMarketsBy24hChange(
+  order: 'asc' | 'desc',
+  perPage: number
+): Promise<CoinGeckoMarketRow[]> {
+  const orderParam = order === 'desc' ? 'percent_change_24h_desc' : 'percent_change_24h_asc';
+  const url = `${COINGECKO_BASE}/coins/markets?vs_currency=usd&order=${orderParam}&per_page=${perPage}&page=1&sparkline=false`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`CoinGecko markets request failed: ${res.status}`);
+  }
+  return (await res.json()) as CoinGeckoMarketRow[];
+}

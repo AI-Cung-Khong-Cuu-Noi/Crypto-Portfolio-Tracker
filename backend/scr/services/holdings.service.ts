@@ -18,7 +18,20 @@ function buyCost(tx: ITransaction): number {
   return tx.amount * price + fee;
 }
 
-export function aggregateHoldingsFromTransactions(transactions: ITransaction[]): AggregatedPosition[] {
+function sellProceedsUsd(tx: ITransaction): number {
+  const fee = tx.fee ?? 0;
+  if (tx.totalValue != null && !Number.isNaN(tx.totalValue)) {
+    return tx.totalValue;
+  }
+  const price = tx.price ?? 0;
+  return tx.amount * price - fee;
+}
+
+export function aggregatePositionsAndRealized(transactions: ITransaction[]): {
+  positions: AggregatedPosition[];
+  totalRealizedPnlUsd: number;
+} {
+  let totalRealizedPnlUsd = 0;
   const sorted = [...transactions].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
@@ -45,7 +58,10 @@ export function aggregateHoldingsFromTransactions(transactions: ITransaction[]):
       if (pos.qty <= 0) continue;
       const avg = pos.cost / pos.qty;
       const sellQty = Math.min(tx.amount, pos.qty);
-      pos.cost -= sellQty * avg;
+      const costRemoved = sellQty * avg;
+      const proceeds = sellProceedsUsd(tx);
+      totalRealizedPnlUsd += proceeds - costRemoved;
+      pos.cost -= costRemoved;
       pos.qty -= sellQty;
       if (pos.qty < 1e-16) {
         pos.qty = 0;
@@ -76,7 +92,7 @@ export function aggregateHoldingsFromTransactions(transactions: ITransaction[]):
     }
   }
 
-  return [...map.entries()]
+  const positions = [...map.entries()]
     .filter(([, p]) => p.qty > 0)
     .map(([symbol, p]) => ({
       symbol,
@@ -85,6 +101,12 @@ export function aggregateHoldingsFromTransactions(transactions: ITransaction[]):
       costBasisUsd: p.cost,
       averageCostUsd: p.qty > 0 ? p.cost / p.qty : 0,
     }));
+
+  return { positions, totalRealizedPnlUsd };
+}
+
+export function aggregateHoldingsFromTransactions(transactions: ITransaction[]): AggregatedPosition[] {
+  return aggregatePositionsAndRealized(transactions).positions;
 }
 
 export type HoldingWithMarket = AggregatedPosition & {
