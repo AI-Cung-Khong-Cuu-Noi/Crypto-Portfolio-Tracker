@@ -12,7 +12,7 @@ export const useProfile = () => {
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { name: string; email: string }) => usersAPI.updateProfile(data),
+    mutationFn: (data: { name: string; avatar?: string }) => usersAPI.updateProfile(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile'] });
       toast.success('Profile updated successfully');
@@ -25,10 +25,10 @@ export const useUpdateProfile = () => {
 
 export const useChangePassword = () => {
   return useMutation({
-    mutationFn: (data: { currentPassword: string; newPassword: string }) =>
-      usersAPI.changePassword(data.currentPassword, data.newPassword),
-    onSuccess: () => {
-      toast.success('Password changed successfully');
+    mutationFn: (data: { oldPassword: string; newPassword: string }) =>
+      usersAPI.changePassword(data.oldPassword, data.newPassword),
+    onSuccess: (data) => {
+      toast.success(data.message || 'Password changed successfully');
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to change password');

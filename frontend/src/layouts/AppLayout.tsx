@@ -5,14 +5,19 @@ import Sidebar from '../components/common/Sidebar';
 import Header from '../components/common/Header';
 
 export default function AppLayout() {
-  const { user, token } = useAuthStore();
+  const { user, token, isInitialized } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (!isInitialized) return;
     if (!token || !user) {
       navigate('/login');
     }
-  }, [token, user, navigate]);
+  }, [isInitialized, token, user, navigate]);
+
+  if (!isInitialized) {
+    return <div className='h-screen flex items-center justify-center text-gray-500'>Loading...</div>;
+  }
 
   if (!token || !user) {
     return null;
