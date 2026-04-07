@@ -8,6 +8,7 @@ export interface IUser extends Document {
   avatar?: string;
   role: 'USER' | 'ADMIN';
   status: 'PENDING' | 'ACTIVE' | 'BANNED';
+  deleted_at?: Date | null;
   created_at: Date;
   updated_at: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -44,6 +45,10 @@ const UserSchema: Schema = new Schema(
       type: String,
       enum: ['PENDING', 'ACTIVE', 'BANNED'],
       default: 'PENDING',
+    },
+    deleted_at: {
+      type: Date,
+      default: null,
     },
   },
   {
