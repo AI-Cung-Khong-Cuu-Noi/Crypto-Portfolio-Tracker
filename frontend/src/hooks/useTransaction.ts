@@ -1,14 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { transactionsAPI } from '../api/transactions';
+import { TransactionListParams, transactionsAPI } from '../api/transactions';
 import { toast } from 'sonner';
 
 interface CreateTransactionData {
   portfolioId: string;
   symbol: string;
   type: 'BUY' | 'SELL' | 'TRANSFER';
+  transferDirection?: 'IN' | 'OUT';
   quantity: number;
-  price: number;
+  price?: number;
   fee?: number;
+  totalValue?: number;
+  exchange?: string;
+  coinGeckoId?: string;
   date: string;
   notes?: string;
 }
@@ -16,7 +20,7 @@ interface CreateTransactionData {
 export const useTransactions = (page: number = 1, limit: number = 10, portfolioId?: string) => {
   return useQuery({
     queryKey: ['transactions', page, limit, portfolioId],
-    queryFn: () => transactionsAPI.list(page, limit, portfolioId),
+    queryFn: () => transactionsAPI.list({ page, limit, portfolioId } as TransactionListParams),
   });
 };
 
@@ -41,10 +45,12 @@ export const useUpdateTransaction = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<CreateTransactionData> }) =>
       transactionsAPI.update(id, data),
-    onSuccess: (_, variables) => {
+    onSuccess: (updatedTx, variables) => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      if (variables.data.portfolioId) {
-        queryClient.invalidateQueries({ queryKey: ['holdings', variables.data.portfolioId] });
+      const portfolioId = variables.data.portfolioId || updatedTx.portfolioId;
+      if (portfolioId) {
+        queryClient.invalidateQueries({ queryKey: ['holdings', portfolioId] });
+        queryClient.invalidateQueries({ queryKey: ['portfolio', portfolioId] });
       }
       toast.success('Transaction updated successfully');
     },

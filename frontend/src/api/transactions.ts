@@ -5,11 +5,21 @@ interface CreateTransactionData {
   portfolioId: string;
   symbol: string;
   type: 'BUY' | 'SELL' | 'TRANSFER';
+  transferDirection?: 'IN' | 'OUT';
   quantity: number;
-  price: number;
+  price?: number;
   fee?: number;
+  totalValue?: number;
+  exchange?: string;
+  coinGeckoId?: string;
   date: string;
   notes?: string;
+}
+
+export interface TransactionListParams {
+  page?: number;
+  limit?: number;
+  portfolioId?: string;
 }
 
 type TxDoc = {
@@ -62,17 +72,21 @@ export const transactionsAPI = {
       amount: data.quantity,
       price: data.price,
       fee: data.fee ?? 0,
+      totalValue: data.totalValue,
+      exchange: data.exchange,
+      coinGeckoId: data.coinGeckoId,
       date: data.date,
       note: data.notes ?? '',
     };
     if (data.type === 'TRANSFER') {
-      body.transferDirection = 'IN';
+      body.transferDirection = data.transferDirection ?? 'IN';
     }
     const response = await axiosInstance.post<{ success: boolean; data: TxDoc }>('/transactions', body);
     return mapTransaction(response.data.data);
   },
 
-  list: async (page: number = 1, limit: number = 10, portfolioId?: string): Promise<TransactionsListResult> => {
+  list: async (params: TransactionListParams = {}): Promise<TransactionsListResult> => {
+    const { page = 1, limit = 10, portfolioId } = params;
     const response = await axiosInstance.get<{
       success: boolean;
       data: TxDoc[];
@@ -93,8 +107,12 @@ export const transactionsAPI = {
     if (data.quantity !== undefined) body.amount = data.quantity;
     if (data.price !== undefined) body.price = data.price;
     if (data.fee !== undefined) body.fee = data.fee;
+    if (data.totalValue !== undefined) body.totalValue = data.totalValue;
+    if (data.exchange !== undefined) body.exchange = data.exchange;
+    if (data.coinGeckoId !== undefined) body.coinGeckoId = data.coinGeckoId;
     if (data.date !== undefined) body.date = data.date;
     if (data.notes !== undefined) body.note = data.notes;
+    if (data.transferDirection !== undefined) body.transferDirection = data.transferDirection;
     const response = await axiosInstance.put<{ success: boolean; data: TxDoc }>(`/transactions/${id}`, body);
     return mapTransaction(response.data.data);
   },
