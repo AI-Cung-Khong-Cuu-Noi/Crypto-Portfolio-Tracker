@@ -56,6 +56,43 @@ export async function resolveCoinGeckoId(symbol: string, hintId?: string): Promi
   }
 }
 
+export type SymbolUsdQuote = {
+  usd: number | null;
+  usd_24h_change: number | null;
+};
+
+export async function fetchUsdPricesForSymbols(
+  entries: { symbol: string; coinGeckoId?: string }[]
+): Promise<Map<string, SymbolUsdQuote>> {
+  const hints = new Map<string, string | undefined>();
+  for (const e of entries) {
+    hints.set(String(e.symbol).toUpperCase(), e.coinGeckoId);
+  }
+  const symbols = [...hints.keys()];
+  if (symbols.length === 0) {
+    return new Map();
+  }
+
+  const resolvedIds = await Promise.all(symbols.map((s) => resolveCoinGeckoId(s, hints.get(s))));
+  const ids = resolvedIds.filter((id): id is string => Boolean(id));
+  const quotes = ids.length > 0 ? await fetchUsdQuotesByCoinIds(ids) : {};
+
+  const out = new Map<string, SymbolUsdQuote>();
+  symbols.forEach((sym, i) => {
+    const id = resolvedIds[i];
+    if (!id) {
+      out.set(sym, { usd: null, usd_24h_change: null });
+      return;
+    }
+    const q = quotes[id];
+    out.set(sym, {
+      usd: q?.usd ?? null,
+      usd_24h_change: q?.usd_24h_change ?? null,
+    });
+  });
+  return out;
+}
+
 export async function fetchUsdQuotesByCoinIds(
   ids: string[]
 ): Promise<Record<string, CoinGeckoUsdQuote>> {
