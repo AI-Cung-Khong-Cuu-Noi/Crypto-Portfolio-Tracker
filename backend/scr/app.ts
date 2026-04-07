@@ -5,6 +5,7 @@ import { errorHandler } from './middlewares/error.middleware';
 import authRoutes from './routers/auth.router';
 import userRoutes from './routers/user.router';
 import portfolioRoutes from './routers/portfolio.router';
+import transactionRoutes from './routers/transaction.router';
 import cors from 'cors';
 
 const app: Express = express();
@@ -27,6 +28,7 @@ app.get('/health', (req: Request, res: Response) => {
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/portfolios', portfolioRoutes);
+app.use('/transactions', transactionRoutes);
 
 // Global Error Handler Middleware
 app.use(errorHandler);
