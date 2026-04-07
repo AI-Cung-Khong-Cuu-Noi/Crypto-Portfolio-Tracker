@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePortfolioDetail, usePortfolioHoldings, useUpdatePortfolio, useDeletePortfolio } from '../../hooks/usePortfolio';
-import { useTransactions, useCreateTransaction, useDeleteTransaction } from '../../hooks/useTransaction';
+import { useTransactions, useCreateTransaction, useDeleteTransaction, useUpdateTransaction } from '../../hooks/useTransaction';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -18,7 +18,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { formatCurrency, getColorClass } from '../../utils/format';
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
+import type { Transaction } from '../../types';
 
 const transactionSchema = z.object({
   symbol: z.string().min(1, 'Symbol is required'),
@@ -38,6 +39,8 @@ export default function PortfolioDetail() {
   const [isTransactionOpen, setIsTransactionOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
 
   const { data: portfolio, isLoading: portfolioLoading } = usePortfolioDetail(id);
   const { data: holdingsData, isLoading: holdingsLoading } = usePortfolioHoldings(id);
@@ -48,6 +51,7 @@ export default function PortfolioDetail() {
   const { mutate: deletePortfolio, isPending: isDeleting } = useDeletePortfolio();
   const { mutate: createTransaction, isPending: isCreatingTx } = useCreateTransaction();
   const { mutate: deleteTransaction, isPending: isDeletingTx } = useDeleteTransaction();
+  const { mutate: updateTransaction, isPending: isUpdatingTx } = useUpdateTransaction();
 
   const {
     register,
@@ -83,6 +87,32 @@ export default function PortfolioDetail() {
           reset();
           setIsTransactionOpen(false);
         },
+      }
+    );
+  };
+
+  const onSubmitUpdateTransaction = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingTx) return;
+
+    const formData = new FormData(e.currentTarget);
+    const feeRaw = formData.get('fee') as string;
+
+    updateTransaction(
+      {
+        id: editingTx.id,
+        data: {
+          symbol: (formData.get('symbol') as string).toUpperCase(),
+          type: formData.get('type') as 'BUY' | 'SELL' | 'TRANSFER',
+          quantity: Number(formData.get('quantity')),
+          price: Number(formData.get('price')),
+          fee: feeRaw ? Number(feeRaw) : undefined,
+          date: formData.get('date') as string,
+          notes: (formData.get('notes') as string) || '',
+        },
+      },
+      {
+        onSuccess: () => setEditingTx(null),
       }
     );
   };
@@ -422,13 +452,115 @@ export default function PortfolioDetail() {
                           </td>
                           <td className='py-3 px-4 text-gray-600'>{new Date(tx.date).toLocaleDateString()}</td>
                           <td className='text-right py-3 px-4'>
-                            <button
-                              onClick={() => deleteTransaction(tx.id)}
-                              disabled={isDeletingTx}
-                              className='text-red-600 hover:text-red-700'
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            <div className='flex items-center justify-end gap-3'>
+                              <Dialog open={editingTx?.id === tx.id} onOpenChange={(open) => !open && setEditingTx(null)}>
+                                <DialogTrigger asChild>
+                                  <button
+                                    onClick={() => setEditingTx(tx)}
+                                    className='text-blue-600 hover:text-blue-700'
+                                  >
+                                    <Edit2 size={16} />
+                                  </button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Update Transaction</DialogTitle>
+                                  </DialogHeader>
+                                  <form onSubmit={onSubmitUpdateTransaction} className='space-y-4'>
+                                    <div className='grid grid-cols-2 gap-4'>
+                                      <div>
+                                        <Label htmlFor='edit-symbol'>Symbol</Label>
+                                        <Input id='edit-symbol' name='symbol' defaultValue={tx.symbol} className='mt-1' />
+                                      </div>
+                                      <div>
+                                        <Label htmlFor='edit-type'>Type</Label>
+                                        <select
+                                          id='edit-type'
+                                          name='type'
+                                          defaultValue={tx.type}
+                                          className='mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg'
+                                        >
+                                          <option value='BUY'>BUY</option>
+                                          <option value='SELL'>SELL</option>
+                                          <option value='TRANSFER'>TRANSFER</option>
+                                        </select>
+                                      </div>
+                                    </div>
+
+                                    <div className='grid grid-cols-2 gap-4'>
+                                      <div>
+                                        <Label htmlFor='edit-quantity'>Quantity</Label>
+                                        <Input
+                                          id='edit-quantity'
+                                          name='quantity'
+                                          type='number'
+                                          step='0.00000001'
+                                          defaultValue={tx.quantity}
+                                          className='mt-1'
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label htmlFor='edit-price'>Price</Label>
+                                        <Input
+                                          id='edit-price'
+                                          name='price'
+                                          type='number'
+                                          step='0.01'
+                                          defaultValue={tx.price}
+                                          className='mt-1'
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <div className='grid grid-cols-2 gap-4'>
+                                      <div>
+                                        <Label htmlFor='edit-fee'>Fee</Label>
+                                        <Input
+                                          id='edit-fee'
+                                          name='fee'
+                                          type='number'
+                                          step='0.01'
+                                          defaultValue={tx.fee ?? 0}
+                                          className='mt-1'
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label htmlFor='edit-date'>Date</Label>
+                                        <Input
+                                          id='edit-date'
+                                          name='date'
+                                          type='date'
+                                          defaultValue={new Date(tx.date).toISOString().slice(0, 10)}
+                                          className='mt-1'
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <div>
+                                      <Label htmlFor='edit-notes'>Notes</Label>
+                                      <Input
+                                        id='edit-notes'
+                                        name='notes'
+                                        defaultValue={tx.notes || ''}
+                                        className='mt-1'
+                                      />
+                                    </div>
+
+                                    <Button type='submit' className='w-full' disabled={isUpdatingTx}>
+                                      {isUpdatingTx ? 'Updating...' : 'Update Transaction'}
+                                    </Button>
+                                  </form>
+                                </DialogContent>
+                              </Dialog>
+
+                              <button
+                                onClick={() => setDeletingTx(tx)}
+                                disabled={isDeletingTx}
+                                className='text-red-600 hover:text-red-700'
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -442,6 +574,35 @@ export default function PortfolioDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!deletingTx} onOpenChange={(open) => !open && setDeletingTx(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Transaction?</DialogTitle>
+          </DialogHeader>
+          <p className='text-sm text-gray-500'>
+            Bạn có chắc chắn muốn xóa giao dịch
+            {deletingTx ? ` ${deletingTx.symbol} (${deletingTx.type})` : ''} không?
+          </p>
+          <div className='flex justify-end gap-2'>
+            <Button variant='outline' onClick={() => setDeletingTx(null)} disabled={isDeletingTx}>
+              Cancel
+            </Button>
+            <Button
+              variant='destructive'
+              disabled={isDeletingTx || !deletingTx}
+              onClick={() => {
+                if (!deletingTx) return;
+                deleteTransaction(deletingTx.id, {
+                  onSuccess: () => setDeletingTx(null),
+                });
+              }}
+            >
+              {isDeletingTx ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
