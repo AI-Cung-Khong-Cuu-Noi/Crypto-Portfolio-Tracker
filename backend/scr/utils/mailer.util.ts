@@ -13,12 +13,13 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-export const sendMail = async (to: string, subject: string, text: string) => {
+export const sendMail = async (to: string, subject: string, text: string, html?: string) => {
   await transporter.sendMail({
     from: `"Crypto Portfolio Tracker" <${EMAIL_USER}>`,
     to,
     subject,
-    text
+    text,
+    html
   });
 };
 
