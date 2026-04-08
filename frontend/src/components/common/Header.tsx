@@ -6,6 +6,7 @@ import { useMarkAllAsRead, useMarkAsRead, useNotifications } from '../../hooks/u
 export default function Header() {
   const { user } = useAuthStore();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const { data: notificationsData } = useNotifications(1, 5);
   const { mutate: markAsRead } = useMarkAsRead();
@@ -26,6 +27,10 @@ export default function Header() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showNotifications]);
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [user?.avatar]);
 
   return (
     <div className='h-16 border-b border-gray-200 bg-white flex items-center justify-between px-6'>
@@ -85,9 +90,18 @@ export default function Header() {
           </div>
         )}
 
-        <div className='h-8 w-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center text-white text-sm font-semibold'>
-          {user?.name.charAt(0).toUpperCase()}
-        </div>
+        {user?.avatar && !avatarError ? (
+          <img
+            src={user.avatar}
+            alt={user.name}
+            className='h-8 w-8 rounded-full object-cover border border-gray-200'
+            onError={() => setAvatarError(true)}
+          />
+        ) : (
+          <div className='h-8 w-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center text-white text-sm font-semibold'>
+            {user?.name.charAt(0).toUpperCase()}
+          </div>
+        )}
 
         <div className='flex flex-col'>
           <p className='text-sm font-medium text-gray-900'>{user?.name}</p>
