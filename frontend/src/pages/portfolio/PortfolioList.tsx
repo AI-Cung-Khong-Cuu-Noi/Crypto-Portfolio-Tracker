@@ -19,7 +19,7 @@ import { z } from 'zod';
 import { useState } from 'react';
 
 const createPortfolioSchema = z.object({
-  name: z.string().min(1, 'Portfolio name is required'),
+  name: z.string().min(1, 'Vui lòng nhập tên danh mục'),
   description: z.string().optional(),
 });
 
@@ -58,32 +58,32 @@ export default function PortfolioList() {
   };
 
   if (isLoading) {
-    return <div className='p-6 text-center'>Loading portfolios...</div>;
+    return <div className='p-6 text-center'>Đang tải danh mục...</div>;
   }
 
   return (
     <div className='p-6 space-y-6'>
       <div className='flex items-center justify-between'>
-        <h1 className='text-3xl font-bold text-gray-900'>Portfolios</h1>
+        <h1 className='text-3xl font-bold text-gray-900'>Danh mục đầu tư</h1>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button className='flex items-center gap-2'>
               <Plus size={20} />
-              New Portfolio
+              Tạo danh mục
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create New Portfolio</DialogTitle>
-              <DialogDescription>Add a new portfolio to start tracking your crypto holdings</DialogDescription>
+              <DialogTitle>Tạo danh mục mới</DialogTitle>
+              <DialogDescription>Thêm danh mục mới để bắt đầu theo dõi tài sản crypto</DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleSubmit(onSubmit)} className='space-y-4'>
               <div>
-                <Label htmlFor='name'>Portfolio Name</Label>
+                <Label htmlFor='name'>Tên danh mục</Label>
                 <Input
                   id='name'
-                  placeholder='My Portfolio'
+                  placeholder='Danh mục của tôi'
                   {...register('name')}
                   className='mt-1'
                 />
@@ -91,17 +91,17 @@ export default function PortfolioList() {
               </div>
 
               <div>
-                <Label htmlFor='description'>Description (optional)</Label>
+                <Label htmlFor='description'>Mô tả (tùy chọn)</Label>
                 <Input
                   id='description'
-                  placeholder='Short description'
+                  placeholder='Mô tả ngắn'
                   {...register('description')}
                   className='mt-1'
                 />
               </div>
 
               <Button type='submit' className='w-full' disabled={isCreating}>
-                Create Portfolio
+                Tạo danh mục
               </Button>
             </form>
           </DialogContent>
@@ -130,13 +130,13 @@ export default function PortfolioList() {
                 </div>
 
                 <p className='text-xs text-gray-500 mb-4'>
-                  Created {new Date(portfolio.createdAt).toLocaleDateString()}
+                  Tạo ngày {new Date(portfolio.createdAt).toLocaleDateString('vi-VN')}
                 </p>
 
                 <Link to={`/portfolios/${portfolio.id}`}>
                   <Button variant='outline' className='w-full flex items-center justify-center gap-2'>
                     <Eye size={18} />
-                    View Details
+                    Xem chi tiết
                   </Button>
                 </Link>
               </CardContent>
@@ -146,12 +146,12 @@ export default function PortfolioList() {
       ) : (
         <Card>
           <CardContent className='p-12 text-center'>
-            <p className='text-gray-500 mb-4'>No portfolios yet. Create one to get started!</p>
+            <p className='text-gray-500 mb-4'>Chưa có danh mục. Hãy tạo danh mục để bắt đầu!</p>
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
               <DialogTrigger asChild>
                 <Button className='flex items-center gap-2 mx-auto'>
                   <Plus size={20} />
-                  Create Portfolio
+                  Tạo danh mục
                 </Button>
               </DialogTrigger>
             </Dialog>
@@ -162,17 +162,17 @@ export default function PortfolioList() {
       <Dialog open={!!deletePortfolioId} onOpenChange={(open) => !open && setDeletePortfolioId(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Portfolio?</DialogTitle>
+            <DialogTitle>Xóa danh mục?</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn xóa portfolio này không? Hành động này không thể hoàn tác.
+              Bạn có chắc chắn muốn xóa danh mục này không? Hành động này không thể hoàn tác.
             </DialogDescription>
           </DialogHeader>
           <div className='flex justify-end gap-2'>
             <Button variant='outline' onClick={() => setDeletePortfolioId(null)} disabled={isDeleting}>
-              Cancel
+              Hủy
             </Button>
             <Button variant='destructive' onClick={handleConfirmDelete} disabled={isDeleting}>
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {isDeleting ? 'Đang xóa...' : 'Xóa'}
             </Button>
           </div>
         </DialogContent>

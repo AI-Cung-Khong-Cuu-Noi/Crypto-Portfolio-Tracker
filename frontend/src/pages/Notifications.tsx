@@ -1,7 +1,7 @@
 import { useNotifications, useMarkAsRead, useMarkAllAsRead } from '../hooks/useNotification';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Bell, Trash2 } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Notifications() {
@@ -11,25 +11,25 @@ export default function Notifications() {
   const { mutate: markAllAsRead, isPending: isMarkingAll } = useMarkAllAsRead();
 
   if (isLoading) {
-    return <div className='p-6 text-center'>Loading notifications...</div>;
+    return <div className='p-6 text-center'>Đang tải thông báo...</div>;
   }
 
   return (
     <div className='p-6 space-y-6'>
       <div className='flex items-center justify-between'>
-        <h1 className='text-3xl font-bold text-gray-900'>Notifications</h1>
+        <h1 className='text-3xl font-bold text-gray-900'>Thông báo</h1>
         <Button
           onClick={() => markAllAsRead()}
           disabled={isMarkingAll}
           variant='outline'
         >
-          Mark all as read
+          Đánh dấu đã đọc tất cả
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Notification Center</CardTitle>
+          <CardTitle>Trung tâm thông báo</CardTitle>
         </CardHeader>
         <CardContent>
           {notificationsData && notificationsData.data && notificationsData.data.length > 0 ? (
@@ -58,12 +58,18 @@ export default function Notifications() {
                               ? 'bg-blue-100 text-blue-700'
                               : 'bg-gray-100 text-gray-700'
                           }`}>
-                            {notification.type}
+                            {notification.type === 'ALERT'
+                              ? 'Cảnh báo'
+                              : notification.type === 'TRANSACTION'
+                                ? 'Giao dịch'
+                                : notification.type === 'PORTFOLIO'
+                                  ? 'Danh mục'
+                                  : 'Hệ thống'}
                           </span>
                         </div>
                         <p className='text-sm text-gray-600 mt-1'>{notification.message}</p>
                         <p className='text-xs text-gray-500 mt-2'>
-                          {new Date(notification.createdAt).toLocaleString()}
+                          {new Date(notification.createdAt).toLocaleString('vi-VN')}
                         </p>
                       </div>
                       {!notification.isRead && (
@@ -77,7 +83,7 @@ export default function Notifications() {
               {notificationsData.pagination.total > 10 && (
                 <div className='mt-6 flex items-center justify-between'>
                   <p className='text-sm text-gray-600'>
-                    Showing {((page - 1) * 10) + 1}-{Math.min(page * 10, notificationsData.pagination.total)} of {notificationsData.pagination.total} notifications
+                    Hiển thị {((page - 1) * 10) + 1}–{Math.min(page * 10, notificationsData.pagination.total)} / {notificationsData.pagination.total} thông báo
                   </p>
                   <div className='flex gap-2'>
                     <Button
@@ -85,14 +91,14 @@ export default function Notifications() {
                       disabled={page === 1}
                       onClick={() => setPage(page - 1)}
                     >
-                      Previous
+                      Trước
                     </Button>
                     <Button
                       variant='outline'
                       disabled={page >= Math.ceil(notificationsData.pagination.total / 10)}
                       onClick={() => setPage(page + 1)}
                     >
-                      Next
+                      Sau
                     </Button>
                   </div>
                 </div>
@@ -101,7 +107,7 @@ export default function Notifications() {
           ) : (
             <div className='text-center py-12'>
               <Bell size={48} className='mx-auto mb-4 text-gray-300' />
-              <p className='text-gray-500'>No notifications yet</p>
+              <p className='text-gray-500'>Chưa có thông báo</p>
             </div>
           )}
         </CardContent>

@@ -22,16 +22,29 @@ import { useState, type FormEvent } from 'react';
 import type { Transaction } from '../../types';
 
 const transactionSchema = z.object({
-  symbol: z.string().min(1, 'Symbol is required'),
+  symbol: z.string().min(1, 'Vui lòng nhập mã coin'),
   type: z.enum(['BUY', 'SELL', 'TRANSFER']),
-  quantity: z.coerce.number().positive('Quantity must be positive'),
-  price: z.coerce.number().positive('Price must be positive'),
+  quantity: z.coerce.number().positive('Số lượng phải lớn hơn 0'),
+  price: z.coerce.number().positive('Giá phải lớn hơn 0'),
   fee: z.coerce.number().optional(),
   date: z.string(),
   notes: z.string().optional(),
 });
 
 type TransactionForm = z.infer<typeof transactionSchema>;
+
+function transactionTypeLabel(type: string) {
+  switch (type) {
+    case 'BUY':
+      return 'Mua';
+    case 'SELL':
+      return 'Bán';
+    case 'TRANSFER':
+      return 'Chuyển';
+    default:
+      return type;
+  }
+}
 
 export default function PortfolioDetail() {
   const { id } = useParams<{ id: string }>();
@@ -118,11 +131,11 @@ export default function PortfolioDetail() {
   };
 
   if (portfolioLoading) {
-    return <div className='p-6 text-center'>Loading portfolio...</div>;
+    return <div className='p-6 text-center'>Đang tải danh mục...</div>;
   }
 
   if (!portfolio) {
-    return <div className='p-6 text-center'>Portfolio not found</div>;
+    return <div className='p-6 text-center'>Không tìm thấy danh mục</div>;
   }
 
   return (
@@ -148,12 +161,12 @@ export default function PortfolioDetail() {
             <DialogTrigger asChild>
               <Button variant='outline' className='flex items-center gap-2'>
                 <Edit2 size={18} />
-                Edit
+                Sửa
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Edit Portfolio</DialogTitle>
+                <DialogTitle>Chỉnh sửa danh mục</DialogTitle>
               </DialogHeader>
               <form
                 onSubmit={(e) => {
@@ -172,7 +185,7 @@ export default function PortfolioDetail() {
                 className='space-y-4'
               >
                 <div>
-                  <Label htmlFor='edit-name'>Portfolio Name</Label>
+                  <Label htmlFor='edit-name'>Tên danh mục</Label>
                   <Input
                     id='edit-name'
                     name='name'
@@ -181,7 +194,7 @@ export default function PortfolioDetail() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor='edit-description'>Description</Label>
+                  <Label htmlFor='edit-description'>Mô tả</Label>
                   <Input
                     id='edit-description'
                     name='description'
@@ -190,7 +203,7 @@ export default function PortfolioDetail() {
                   />
                 </div>
                 <Button type='submit' className='w-full' disabled={isUpdating}>
-                  Save Changes
+                  Lưu thay đổi
                 </Button>
               </form>
             </DialogContent>
@@ -200,22 +213,22 @@ export default function PortfolioDetail() {
             <DialogTrigger asChild>
               <Button variant='destructive' className='flex items-center gap-2'>
                 <Trash2 size={18} />
-                Delete
+                Xóa
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Delete Portfolio?</DialogTitle>
+                <DialogTitle>Xóa danh mục?</DialogTitle>
               </DialogHeader>
               <p className='text-sm text-gray-500'>
-                Bạn có chắc chắn muốn xóa portfolio này không? Hành động này không thể hoàn tác.
+                Bạn có chắc chắn muốn xóa danh mục này không? Hành động này không thể hoàn tác.
               </p>
               <div className='flex justify-end gap-2'>
                 <Button variant='outline' onClick={() => setIsDeleteOpen(false)} disabled={isDeleting}>
-                  Cancel
+                  Hủy
                 </Button>
                 <Button variant='destructive' onClick={handleDelete} disabled={isDeleting}>
-                  {isDeleting ? 'Deleting...' : 'Delete'}
+                  {isDeleting ? 'Đang xóa...' : 'Xóa'}
                 </Button>
               </div>
             </DialogContent>
@@ -226,7 +239,7 @@ export default function PortfolioDetail() {
       <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
         <Card>
           <CardContent className='pt-6'>
-            <p className='text-sm text-gray-500'>Total Value</p>
+            <p className='text-sm text-gray-500'>Tổng giá trị</p>
             <p className='text-2xl font-bold text-gray-900 mt-1'>
               {formatCurrency(holdingsSummary?.totalMarketValueUsd ?? 0)}
             </p>
@@ -234,7 +247,7 @@ export default function PortfolioDetail() {
         </Card>
         <Card>
           <CardContent className='pt-6'>
-            <p className='text-sm text-gray-500'>Total Cost</p>
+            <p className='text-sm text-gray-500'>Tổng giá vốn</p>
             <p className='text-2xl font-bold text-gray-900 mt-1'>
               {formatCurrency(holdingsSummary?.totalCostBasisUsd ?? 0)}
             </p>
@@ -242,7 +255,7 @@ export default function PortfolioDetail() {
         </Card>
         <Card>
           <CardContent className='pt-6'>
-            <p className='text-sm text-gray-500'>Unrealized P&L</p>
+            <p className='text-sm text-gray-500'>Lãi/lỗ chưa thực hiện</p>
             <p className={`text-2xl font-bold mt-1 ${getColorClass(holdingsSummary?.totalUnrealizedPnlUsd ?? 0)}`}>
               {formatCurrency(holdingsSummary?.totalUnrealizedPnlUsd ?? 0)}
             </p>
@@ -252,30 +265,30 @@ export default function PortfolioDetail() {
 
       <Tabs defaultValue='holdings' className='w-full'>
         <TabsList>
-          <TabsTrigger value='holdings'>Holdings</TabsTrigger>
-          <TabsTrigger value='transactions'>Transactions</TabsTrigger>
+          <TabsTrigger value='holdings'>Tài sản</TabsTrigger>
+          <TabsTrigger value='transactions'>Giao dịch</TabsTrigger>
         </TabsList>
 
         <TabsContent value='holdings'>
           <Card>
             <CardHeader>
-              <CardTitle>Current Holdings</CardTitle>
+              <CardTitle>Tài sản hiện tại</CardTitle>
             </CardHeader>
             <CardContent>
               {holdingsLoading ? (
-                <div className='text-center py-8'>Loading holdings...</div>
+                <div className='text-center py-8'>Đang tải tài sản...</div>
               ) : holdings && holdings.length > 0 ? (
                 <div className='overflow-x-auto'>
                   <table className='w-full text-sm'>
                     <thead>
                       <tr className='border-b border-gray-200'>
-                        <th className='text-left py-3 px-4 font-semibold text-gray-900'>Symbol</th>
-                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Quantity</th>
-                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Avg Cost</th>
-                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Current Price</th>
-                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Total Value</th>
-                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Unrealized P&L</th>
-                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>24h Change</th>
+                        <th className='text-left py-3 px-4 font-semibold text-gray-900'>Mã</th>
+                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Số lượng</th>
+                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Giá vốn TB</th>
+                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Giá hiện tại</th>
+                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Tổng giá trị</th>
+                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Lãi/lỗ chưa thực hiện</th>
+                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Biến động 24h</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -298,7 +311,7 @@ export default function PortfolioDetail() {
                   </table>
                 </div>
               ) : (
-                <div className='text-center py-8 text-gray-500'>No holdings yet</div>
+                <div className='text-center py-8 text-gray-500'>Chưa có tài sản</div>
               )}
             </CardContent>
           </Card>
@@ -308,22 +321,22 @@ export default function PortfolioDetail() {
           <Card>
             <CardHeader>
               <div className='flex items-center justify-between'>
-                <CardTitle>Transactions</CardTitle>
+                <CardTitle>Giao dịch</CardTitle>
                 <Dialog open={isTransactionOpen} onOpenChange={setIsTransactionOpen}>
                   <DialogTrigger asChild>
                     <Button size='sm' className='flex items-center gap-2'>
                       <Plus size={18} />
-                      Add Transaction
+                      Thêm giao dịch
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Add Transaction</DialogTitle>
+                      <DialogTitle>Thêm giao dịch</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={handleSubmit(onSubmit)} className='space-y-4'>
                       <div className='grid grid-cols-2 gap-4'>
                         <div>
-                          <Label htmlFor='symbol'>Symbol</Label>
+                          <Label htmlFor='symbol'>Mã coin</Label>
                           <Input
                             id='symbol'
                             placeholder='BTC'
@@ -333,22 +346,22 @@ export default function PortfolioDetail() {
                           {errors.symbol && <p className='text-red-600 text-sm mt-1'>{errors.symbol.message}</p>}
                         </div>
                         <div>
-                          <Label htmlFor='type'>Type</Label>
+                          <Label htmlFor='type'>Loại</Label>
                           <select
                             id='type'
                             {...register('type')}
                             className='mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg'
                           >
-                            <option value='BUY'>BUY</option>
-                            <option value='SELL'>SELL</option>
-                            <option value='TRANSFER'>TRANSFER</option>
+                            <option value='BUY'>Mua</option>
+                            <option value='SELL'>Bán</option>
+                            <option value='TRANSFER'>Chuyển</option>
                           </select>
                         </div>
                       </div>
 
                       <div className='grid grid-cols-2 gap-4'>
                         <div>
-                          <Label htmlFor='quantity'>Quantity</Label>
+                          <Label htmlFor='quantity'>Số lượng</Label>
                           <Input
                             id='quantity'
                             type='number'
@@ -358,7 +371,7 @@ export default function PortfolioDetail() {
                           />
                         </div>
                         <div>
-                          <Label htmlFor='price'>Price</Label>
+                          <Label htmlFor='price'>Giá</Label>
                           <Input
                             id='price'
                             type='number'
@@ -371,7 +384,7 @@ export default function PortfolioDetail() {
 
                       <div className='grid grid-cols-2 gap-4'>
                         <div>
-                          <Label htmlFor='fee'>Fee (optional)</Label>
+                          <Label htmlFor='fee'>Phí (tùy chọn)</Label>
                           <Input
                             id='fee'
                             type='number'
@@ -381,7 +394,7 @@ export default function PortfolioDetail() {
                           />
                         </div>
                         <div>
-                          <Label htmlFor='date'>Date</Label>
+                          <Label htmlFor='date'>Ngày</Label>
                           <Input
                             id='date'
                             type='date'
@@ -392,17 +405,17 @@ export default function PortfolioDetail() {
                       </div>
 
                       <div>
-                        <Label htmlFor='notes'>Notes (optional)</Label>
+                        <Label htmlFor='notes'>Ghi chú (tùy chọn)</Label>
                         <Input
                           id='notes'
-                          placeholder='Additional notes'
+                          placeholder='Ghi chú thêm'
                           {...register('notes')}
                           className='mt-1'
                         />
                       </div>
 
                       <Button type='submit' className='w-full' disabled={isCreatingTx}>
-                        Add Transaction
+                        Thêm giao dịch
                       </Button>
                     </form>
                   </DialogContent>
@@ -411,19 +424,19 @@ export default function PortfolioDetail() {
             </CardHeader>
             <CardContent>
               {transactionsLoading ? (
-                <div className='text-center py-8'>Loading transactions...</div>
+                <div className='text-center py-8'>Đang tải giao dịch...</div>
               ) : transactions && transactions.data && transactions.data.length > 0 ? (
                 <div className='overflow-x-auto'>
                   <table className='w-full text-sm'>
                     <thead>
                       <tr className='border-b border-gray-200'>
-                        <th className='text-left py-3 px-4 font-semibold text-gray-900'>Symbol</th>
-                        <th className='text-left py-3 px-4 font-semibold text-gray-900'>Type</th>
-                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Quantity</th>
-                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Price</th>
-                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Total</th>
-                        <th className='text-left py-3 px-4 font-semibold text-gray-900'>Date</th>
-                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Action</th>
+                        <th className='text-left py-3 px-4 font-semibold text-gray-900'>Mã</th>
+                        <th className='text-left py-3 px-4 font-semibold text-gray-900'>Loại</th>
+                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Số lượng</th>
+                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Giá</th>
+                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Tổng</th>
+                        <th className='text-left py-3 px-4 font-semibold text-gray-900'>Ngày</th>
+                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Thao tác</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -438,7 +451,7 @@ export default function PortfolioDetail() {
                                 ? 'bg-red-100 text-red-700'
                                 : 'bg-gray-100 text-gray-700'
                             }`}>
-                              {tx.type}
+                              {transactionTypeLabel(tx.type)}
                             </span>
                           </td>
                           <td className='text-right py-3 px-4 text-gray-600'>{tx.quantity.toFixed(4)}</td>
@@ -450,7 +463,7 @@ export default function PortfolioDetail() {
                                 : tx.quantity * tx.price
                             )}
                           </td>
-                          <td className='py-3 px-4 text-gray-600'>{new Date(tx.date).toLocaleDateString()}</td>
+                          <td className='py-3 px-4 text-gray-600'>{new Date(tx.date).toLocaleDateString('vi-VN')}</td>
                           <td className='text-right py-3 px-4'>
                             <div className='flex items-center justify-end gap-3'>
                               <Dialog open={editingTx?.id === tx.id} onOpenChange={(open) => !open && setEditingTx(null)}>
@@ -464,32 +477,32 @@ export default function PortfolioDetail() {
                                 </DialogTrigger>
                                 <DialogContent>
                                   <DialogHeader>
-                                    <DialogTitle>Update Transaction</DialogTitle>
+                                    <DialogTitle>Cập nhật giao dịch</DialogTitle>
                                   </DialogHeader>
                                   <form onSubmit={onSubmitUpdateTransaction} className='space-y-4'>
                                     <div className='grid grid-cols-2 gap-4'>
                                       <div>
-                                        <Label htmlFor='edit-symbol'>Symbol</Label>
+                                        <Label htmlFor='edit-symbol'>Mã coin</Label>
                                         <Input id='edit-symbol' name='symbol' defaultValue={tx.symbol} className='mt-1' />
                                       </div>
                                       <div>
-                                        <Label htmlFor='edit-type'>Type</Label>
+                                        <Label htmlFor='edit-type'>Loại</Label>
                                         <select
                                           id='edit-type'
                                           name='type'
                                           defaultValue={tx.type}
                                           className='mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg'
                                         >
-                                          <option value='BUY'>BUY</option>
-                                          <option value='SELL'>SELL</option>
-                                          <option value='TRANSFER'>TRANSFER</option>
+                                          <option value='BUY'>Mua</option>
+                                          <option value='SELL'>Bán</option>
+                                          <option value='TRANSFER'>Chuyển</option>
                                         </select>
                                       </div>
                                     </div>
 
                                     <div className='grid grid-cols-2 gap-4'>
                                       <div>
-                                        <Label htmlFor='edit-quantity'>Quantity</Label>
+                                        <Label htmlFor='edit-quantity'>Số lượng</Label>
                                         <Input
                                           id='edit-quantity'
                                           name='quantity'
@@ -500,7 +513,7 @@ export default function PortfolioDetail() {
                                         />
                                       </div>
                                       <div>
-                                        <Label htmlFor='edit-price'>Price</Label>
+                                        <Label htmlFor='edit-price'>Giá</Label>
                                         <Input
                                           id='edit-price'
                                           name='price'
@@ -514,7 +527,7 @@ export default function PortfolioDetail() {
 
                                     <div className='grid grid-cols-2 gap-4'>
                                       <div>
-                                        <Label htmlFor='edit-fee'>Fee</Label>
+                                        <Label htmlFor='edit-fee'>Phí</Label>
                                         <Input
                                           id='edit-fee'
                                           name='fee'
@@ -525,7 +538,7 @@ export default function PortfolioDetail() {
                                         />
                                       </div>
                                       <div>
-                                        <Label htmlFor='edit-date'>Date</Label>
+                                        <Label htmlFor='edit-date'>Ngày</Label>
                                         <Input
                                           id='edit-date'
                                           name='date'
@@ -537,7 +550,7 @@ export default function PortfolioDetail() {
                                     </div>
 
                                     <div>
-                                      <Label htmlFor='edit-notes'>Notes</Label>
+                                      <Label htmlFor='edit-notes'>Ghi chú</Label>
                                       <Input
                                         id='edit-notes'
                                         name='notes'
@@ -547,7 +560,7 @@ export default function PortfolioDetail() {
                                     </div>
 
                                     <Button type='submit' className='w-full' disabled={isUpdatingTx}>
-                                      {isUpdatingTx ? 'Updating...' : 'Update Transaction'}
+                                      {isUpdatingTx ? 'Đang cập nhật...' : 'Cập nhật giao dịch'}
                                     </Button>
                                   </form>
                                 </DialogContent>
@@ -568,7 +581,7 @@ export default function PortfolioDetail() {
                   </table>
                 </div>
               ) : (
-                <div className='text-center py-8 text-gray-500'>No transactions yet</div>
+                <div className='text-center py-8 text-gray-500'>Chưa có giao dịch</div>
               )}
             </CardContent>
           </Card>
@@ -578,15 +591,15 @@ export default function PortfolioDetail() {
       <Dialog open={!!deletingTx} onOpenChange={(open) => !open && setDeletingTx(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Transaction?</DialogTitle>
+            <DialogTitle>Xóa giao dịch?</DialogTitle>
           </DialogHeader>
           <p className='text-sm text-gray-500'>
             Bạn có chắc chắn muốn xóa giao dịch
-            {deletingTx ? ` ${deletingTx.symbol} (${deletingTx.type})` : ''} không?
+            {deletingTx ? ` ${deletingTx.symbol} (${transactionTypeLabel(deletingTx.type)})` : ''} không?
           </p>
           <div className='flex justify-end gap-2'>
             <Button variant='outline' onClick={() => setDeletingTx(null)} disabled={isDeletingTx}>
-              Cancel
+              Hủy
             </Button>
             <Button
               variant='destructive'
@@ -598,7 +611,7 @@ export default function PortfolioDetail() {
                 });
               }}
             >
-              {isDeletingTx ? 'Deleting...' : 'Delete'}
+              {isDeletingTx ? 'Đang xóa...' : 'Xóa'}
             </Button>
           </div>
         </DialogContent>
