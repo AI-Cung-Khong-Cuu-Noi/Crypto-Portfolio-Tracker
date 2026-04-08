@@ -27,24 +27,24 @@ export default function Watchlist() {
   };
 
   if (isLoading) {
-    return <div className='p-6 text-center'>Loading watchlist...</div>;
+    return <div className='p-6 text-center'>Đang tải danh sách theo dõi...</div>;
   }
 
   return (
     <div className='p-6 space-y-6'>
       <div className='flex items-center justify-between'>
-        <h1 className='text-3xl font-bold text-gray-900'>Watchlist</h1>
+        <h1 className='text-3xl font-bold text-gray-900'>Danh sách theo dõi</h1>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button className='flex items-center gap-2'>
               <Plus size={20} />
-              Add Coin
+              Thêm coin
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add to Watchlist</DialogTitle>
-              <DialogDescription>Enter the symbol of the crypto you want to watch</DialogDescription>
+              <DialogTitle>Thêm vào danh sách theo dõi</DialogTitle>
+              <DialogDescription>Nhập mã coin bạn muốn theo dõi</DialogDescription>
             </DialogHeader>
             <div className='space-y-4'>
               <Input
@@ -54,7 +54,7 @@ export default function Watchlist() {
                 onKeyPress={(e) => e.key === 'Enter' && handleAdd()}
               />
               <Button onClick={handleAdd} className='w-full' disabled={isAdding || !symbol.trim()}>
-                Add to Watchlist
+                Thêm
               </Button>
             </div>
           </DialogContent>
@@ -63,7 +63,7 @@ export default function Watchlist() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Coins</CardTitle>
+          <CardTitle>Danh sách coin</CardTitle>
         </CardHeader>
         <CardContent>
           {watchlist && watchlist.length > 0 ? (
@@ -71,11 +71,11 @@ export default function Watchlist() {
               <table className='w-full text-sm'>
                 <thead>
                   <tr className='border-b border-gray-200'>
-                    <th className='text-left py-3 px-4 font-semibold text-gray-900'>Symbol</th>
-                    <th className='text-right py-3 px-4 font-semibold text-gray-900'>Price</th>
-                    <th className='text-right py-3 px-4 font-semibold text-gray-900'>24h Change</th>
-                    <th className='text-right py-3 px-4 font-semibold text-gray-900'>Market Cap</th>
-                    <th className='text-right py-3 px-4 font-semibold text-gray-900'>Action</th>
+                    <th className='text-left py-3 px-4 font-semibold text-gray-900'>Mã</th>
+                    <th className='text-right py-3 px-4 font-semibold text-gray-900'>Giá</th>
+                    <th className='text-right py-3 px-4 font-semibold text-gray-900'>Biến động 24h</th>
+                    <th className='text-right py-3 px-4 font-semibold text-gray-900'>Vốn hóa</th>
+                    <th className='text-right py-3 px-4 font-semibold text-gray-900'>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -87,7 +87,7 @@ export default function Watchlist() {
                         {coin.change24h.toFixed(2)}%
                       </td>
                       <td className='text-right py-3 px-4 text-gray-600'>
-                        {coin.marketCap ? formatCurrency(coin.marketCap) : 'N/A'}
+                        {coin.marketCap ? formatCurrency(coin.marketCap) : 'Không có'}
                       </td>
                       <td className='text-right py-3 px-4'>
                         <button
@@ -105,12 +105,12 @@ export default function Watchlist() {
             </div>
           ) : (
             <div className='text-center py-12'>
-              <p className='text-gray-500 mb-4'>No coins in watchlist yet</p>
+              <p className='text-gray-500 mb-4'>Chưa có coin trong danh sách theo dõi</p>
               <Dialog open={isOpen} onOpenChange={setIsOpen}>
                 <DialogTrigger asChild>
                   <Button className='flex items-center gap-2 mx-auto'>
                     <Plus size={20} />
-                    Add Coin
+                    Thêm coin
                   </Button>
                 </DialogTrigger>
               </Dialog>
@@ -122,14 +122,14 @@ export default function Watchlist() {
       <Dialog open={!!deletingId} onOpenChange={(open) => !open && setDeletingId(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete from Watchlist?</DialogTitle>
+            <DialogTitle>Xóa khỏi danh sách theo dõi?</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn xóa coin này khỏi watchlist không?
+              Bạn có chắc chắn muốn xóa coin này khỏi danh sách theo dõi không?
             </DialogDescription>
           </DialogHeader>
           <div className='flex justify-end gap-2'>
             <Button variant='outline' onClick={() => setDeletingId(null)} disabled={isRemoving}>
-              Cancel
+              Hủy
             </Button>
             <Button
               variant='destructive'
@@ -141,7 +141,7 @@ export default function Watchlist() {
                 });
               }}
             >
-              {isRemoving ? 'Deleting...' : 'Delete'}
+              {isRemoving ? 'Đang xóa...' : 'Xóa'}
             </Button>
           </div>
         </DialogContent>

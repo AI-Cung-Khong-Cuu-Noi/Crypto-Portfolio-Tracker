@@ -9,14 +9,14 @@ import { Button } from '../components/ui/Button';
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
 export default function Dashboard() {
-  const [performanceDays, setPerformanceDays] = useState(30);
+  const [performanceDays, setPerformanceDays] = useState(7);
   const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
   const { data: allocation, isLoading: allocationLoading } = useDashboardAllocation();
   const { data: performance, isLoading: performanceLoading } = useDashboardPerformance(performanceDays);
-  const { data: trend, isLoading: trendLoading } = useDashboardTrend();
+  const { data: trend } = useDashboardTrend();
 
   if (summaryLoading) {
-    return <div className='p-6 text-center'>Loading dashboard...</div>;
+    return <div className='p-6 text-center'>Đang tải bảng điều khiển...</div>;
   }
 
   return (
@@ -26,7 +26,7 @@ export default function Dashboard() {
           <CardContent className='pt-6'>
             <div className='flex items-center justify-between'>
               <div>
-                <p className='text-sm text-gray-500'>Total Portfolio Value</p>
+                <p className='text-sm text-gray-500'>Tổng giá trị danh mục</p>
                 <p className='text-2xl font-bold text-gray-900 mt-1'>
                   {formatCurrency(summary?.totalMarketValueUsd || 0)}
                 </p>
@@ -42,7 +42,7 @@ export default function Dashboard() {
           <CardContent className='pt-6'>
             <div className='flex items-center justify-between'>
               <div>
-                <p className='text-sm text-gray-500'>Unrealized P&L</p>
+                <p className='text-sm text-gray-500'>Lãi/lỗ chưa thực hiện</p>
                 <p className={`text-2xl font-bold mt-1 ${getColorClass(summary?.totalUnrealizedPnlUsd || 0)}`}>
                   {formatCurrency(summary?.totalUnrealizedPnlUsd || 0)}
                 </p>
@@ -64,7 +64,7 @@ export default function Dashboard() {
           <CardContent className='pt-6'>
             <div className='flex items-center justify-between'>
               <div>
-                <p className='text-sm text-gray-500'>Realized P&L</p>
+                <p className='text-sm text-gray-500'>Lãi/lỗ đã thực hiện</p>
                 <p className={`text-2xl font-bold mt-1 ${getColorClass(summary?.totalRealizedPnlUsd || 0)}`}>
                   {formatCurrency(summary?.totalRealizedPnlUsd || 0)}
                 </p>
@@ -101,16 +101,21 @@ export default function Dashboard() {
         <Card className='lg:col-span-2'>
           <CardHeader>
             <div className='flex items-center justify-between'>
-              <CardTitle>Performance</CardTitle>
+              <CardTitle>Hiệu suất</CardTitle>
               <div className='flex gap-2'>
-                {[7, 30, 90, 365].map((days) => (
+                {[
+                  { days: 7, label: '7 ngày' },
+                  { days: 30, label: '30 ngày' },
+                  { days: 90, label: '90 ngày' },
+                  { days: 365, label: '1 năm' },
+                ].map(({ days, label }) => (
                   <Button
                     key={days}
                     variant={performanceDays === days ? 'default' : 'outline'}
                     size='sm'
                     onClick={() => setPerformanceDays(days)}
                   >
-                    {days}d
+                    {label}
                   </Button>
                 ))}
               </div>
@@ -118,7 +123,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {performanceLoading ? (
-              <div className='h-80 flex items-center justify-center text-gray-500'>Loading chart...</div>
+              <div className='h-80 flex items-center justify-center text-gray-500'>Đang tải biểu đồ...</div>
             ) : performance && performance.length > 0 ? (
               <ResponsiveContainer width='100%' height={300}>
                 <LineChart data={performance}>
@@ -127,23 +132,23 @@ export default function Dashboard() {
                   <YAxis />
                   <Tooltip formatter={(value) => formatCurrency(value as number)} />
                   <Legend />
-                  <Line type='monotone' dataKey='totalMarketValueUsd' stroke='#3b82f6' name='Market Value' />
-                  <Line type='monotone' dataKey='totalCostBasisUsd' stroke='#10b981' name='Cost Basis' />
+                  <Line type='monotone' dataKey='totalMarketValueUsd' stroke='#3b82f6' name='Giá trị thị trường' />
+                  <Line type='monotone' dataKey='totalCostBasisUsd' stroke='#10b981' name='Giá vốn' />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className='h-80 flex items-center justify-center text-gray-500'>No data available</div>
+              <div className='h-80 flex items-center justify-center text-gray-500'>Chưa có dữ liệu</div>
             )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Allocation</CardTitle>
+            <CardTitle>Phân bổ</CardTitle>
           </CardHeader>
           <CardContent>
             {allocationLoading ? (
-              <div className='h-80 flex items-center justify-center text-gray-500'>Loading chart...</div>
+              <div className='h-80 flex items-center justify-center text-gray-500'>Đang tải biểu đồ...</div>
             ) : allocation && allocation.length > 0 ? (
               <ResponsiveContainer width='100%' height={300}>
                 <PieChart>
@@ -157,14 +162,14 @@ export default function Dashboard() {
                     fill='#8884d8'
                     dataKey='valueUsd'
                   >
-                    {allocation.map((entry, index) => (
+                    {allocation.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className='h-80 flex items-center justify-center text-gray-500'>No data available</div>
+              <div className='h-80 flex items-center justify-center text-gray-500'>Chưa có dữ liệu</div>
             )}
           </CardContent>
         </Card>
@@ -173,7 +178,7 @@ export default function Dashboard() {
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
         <Card>
           <CardHeader>
-            <CardTitle>Top Gainers</CardTitle>
+            <CardTitle>Tăng mạnh nhất</CardTitle>
           </CardHeader>
           <CardContent>
             {summary && summary.topGainers && summary.topGainers.length > 0 ? (
@@ -194,14 +199,14 @@ export default function Dashboard() {
                 ))}
               </div>
             ) : (
-              <p className='text-gray-500 text-center py-8'>No gainers yet</p>
+              <p className='text-gray-500 text-center py-8'>Chưa có dữ liệu tăng</p>
             )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Top Losers</CardTitle>
+            <CardTitle>Giảm mạnh nhất</CardTitle>
           </CardHeader>
           <CardContent>
             {summary && summary.topLosers && summary.topLosers.length > 0 ? (
@@ -222,7 +227,7 @@ export default function Dashboard() {
                 ))}
               </div>
             ) : (
-              <p className='text-gray-500 text-center py-8'>No losers yet</p>
+              <p className='text-gray-500 text-center py-8'>Chưa có dữ liệu giảm</p>
             )}
           </CardContent>
         </Card>
@@ -234,7 +239,7 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle className='flex items-center gap-2'>
                 <TrendingUp className='text-green-600' size={20} />
-                Market Gainers
+                Top tăng giá thị trường
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -247,7 +252,7 @@ export default function Dashboard() {
                     </div>
                   ))
                 ) : (
-                  <p className='text-gray-500 text-center py-4'>No data</p>
+                  <p className='text-gray-500 text-center py-4'>Không có dữ liệu</p>
                 )}
               </div>
             </CardContent>
@@ -257,7 +262,7 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle className='flex items-center gap-2'>
                 <TrendingDown className='text-red-600' size={20} />
-                Market Losers
+                Top giảm giá thị trường
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -270,7 +275,7 @@ export default function Dashboard() {
                     </div>
                   ))
                 ) : (
-                  <p className='text-gray-500 text-center py-4'>No data</p>
+                  <p className='text-gray-500 text-center py-4'>Không có dữ liệu</p>
                 )}
               </div>
             </CardContent>

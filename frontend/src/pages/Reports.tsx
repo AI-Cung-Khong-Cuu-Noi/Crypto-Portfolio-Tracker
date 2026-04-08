@@ -25,19 +25,20 @@ export default function Reports() {
   const handleExportCsv = () => {
     const rows: string[] = [];
     const now = new Date();
+    const periodLabelVi = period === 'DAY' ? 'Ngày' : period === 'MONTH' ? 'Tháng' : 'Năm';
 
-    rows.push('Report Summary');
-    rows.push(`Generated At,${toCsvCell(now.toISOString())}`);
-    rows.push(`Period,${toCsvCell(period)}`);
-    rows.push(`Portfolio,${toCsvCell(selectedPortfolio === 'all' ? 'All' : selectedPortfolio)}`);
-    rows.push(`Total Trades,${toCsvCell(summary?.totals.tradeCount ?? 0)}`);
-    rows.push(`Realized PnL USD,${toCsvCell(summary?.totals.realizedPnlUsd ?? 0)}`);
-    rows.push(`Buy Volume USD,${toCsvCell(summary?.totals.buyVolumeUsd ?? 0)}`);
-    rows.push(`Sell Volume USD,${toCsvCell(summary?.totals.sellVolumeUsd ?? 0)}`);
+    rows.push('Tóm tắt báo cáo');
+    rows.push(`Tạo lúc,${toCsvCell(now.toISOString())}`);
+    rows.push(`Kỳ,${toCsvCell(periodLabelVi)}`);
+    rows.push(`Danh mục,${toCsvCell(selectedPortfolio === 'all' ? 'Tất cả' : selectedPortfolio)}`);
+    rows.push(`Tổng giao dịch,${toCsvCell(summary?.totals.tradeCount ?? 0)}`);
+    rows.push(`Lãi lỗ đã thực hiện USD,${toCsvCell(summary?.totals.realizedPnlUsd ?? 0)}`);
+    rows.push(`Khối lượng mua USD,${toCsvCell(summary?.totals.buyVolumeUsd ?? 0)}`);
+    rows.push(`Khối lượng bán USD,${toCsvCell(summary?.totals.sellVolumeUsd ?? 0)}`);
     rows.push('');
 
-    rows.push('Summary Buckets');
-    rows.push('Period,Trade Count,Buy Volume USD,Sell Volume USD,Realized PnL USD');
+    rows.push('Chi tiết theo kỳ');
+    rows.push('Kỳ,Số giao dịch,Khối lượng mua USD,Khối lượng bán USD,Lãi lỗ đã thực hiện USD');
     (summary?.buckets ?? []).forEach((bucket) => {
       rows.push(
         [
@@ -51,8 +52,8 @@ export default function Reports() {
     });
     rows.push('');
 
-    rows.push('Tax Realized');
-    rows.push('Date,Symbol,Amount Sold,Proceeds USD,Cost Basis USD,Realized PnL USD,Exchange');
+    rows.push('Thuế (lãi lỗ đã thực hiện)');
+    rows.push('Ngày,Mã,Số lượng bán,Thu USD,Giá vốn USD,Lãi lỗ đã thực hiện USD,Sàn');
     (taxRealized?.lines ?? []).forEach((line) => {
       rows.push(
         [
@@ -68,8 +69,8 @@ export default function Reports() {
     });
     rows.push('');
 
-    rows.push('Performance By Coin');
-    rows.push('Symbol,Trades,Cost Basis USD,Realized PnL Lifetime USD,Current Quantity');
+    rows.push('Hiệu suất theo coin');
+    rows.push('Mã,Số giao dịch,Giá vốn USD,Lãi lỗ đã thực hiện (cộng dồn) USD,Số lượng hiện tại');
     (byCoin?.coins ?? []).forEach((coin) => {
       rows.push(
         [
@@ -82,7 +83,9 @@ export default function Reports() {
       );
     });
 
-    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    // UTF-8 BOM + CRLF: Excel (Windows) nhận đúng tiếng Việt; không BOM thường bị đọc sai encoding.
+    const csvBody = rows.join('\r\n');
+    const blob = new Blob([`\uFEFF${csvBody}`], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -96,7 +99,7 @@ export default function Reports() {
   return (
     <div className='p-6 space-y-6'>
       <div>
-        <h1 className='text-3xl font-bold text-gray-900 mb-4'>Reports & Analytics</h1>
+        <h1 className='text-3xl font-bold text-gray-900 mb-4'>Báo cáo & phân tích</h1>
       </div>
 
       <Card>
@@ -106,29 +109,35 @@ export default function Reports() {
         <CardContent>
           <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
             <div>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>Period</label>
               <div className='flex gap-2'>
-                {['DAY', 'MONTH', 'YEAR'].map((p) => (
+                {(
+                  [
+                    { key: 'DAY' as const, label: 'Ngày' },
+                    { key: 'MONTH' as const, label: 'Tháng' },
+                    { key: 'YEAR' as const, label: 'Năm' },
+                  ] as const
+                ).map(({ key, label }) => (
                   <Button
-                    key={p}
-                    variant={period === p ? 'default' : 'outline'}
+                    key={key}
+                    variant={period === key ? 'default' : 'outline'}
                     size='sm'
-                    onClick={() => setPeriod(p as 'DAY' | 'MONTH' | 'YEAR')}
+                    onClick={() => setPeriod(key)}
                   >
-                    {p}
+                    {label}
                   </Button>
                 ))}
               </div>
+              
             </div>
 
             <div>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>Portfolio</label>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>Danh mục</label>
               <select
                 value={selectedPortfolio}
                 onChange={(e) => setSelectedPortfolio(e.target.value)}
                 className='w-full px-3 py-2 border border-gray-300 rounded-lg'
               >
-                <option value='all'>All Portfolios</option>
+                <option value='all'>Tất cả danh mục</option>
                 {portfolios?.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -138,7 +147,9 @@ export default function Reports() {
             </div>
 
             <div className='flex items-end'>
-              <Button className='w-full' onClick={handleExportCsv}>Export CSV</Button>
+              <Button className='w-full' onClick={handleExportCsv}>
+                Xuất CSV
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -147,11 +158,11 @@ export default function Reports() {
       <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
         <Card>
           <CardHeader>
-            <CardTitle>Realized Gains/Losses</CardTitle>
+            <CardTitle>Lãi / lỗ đã thực hiện</CardTitle>
           </CardHeader>
           <CardContent>
             <div className='text-center py-12'>
-              <p className='text-gray-500 mb-4'>From selected period</p>
+              <p className='text-gray-500 mb-4'>Theo kỳ đã chọn</p>
               <p className={`text-3xl font-bold ${getColorClass(summary?.totals.realizedPnlUsd || 0)}`}>
                 {formatCurrency(summary?.totals.realizedPnlUsd || 0)}
               </p>
@@ -161,12 +172,12 @@ export default function Reports() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Total Trades</CardTitle>
+            <CardTitle>Tổng giao dịch</CardTitle>
           </CardHeader>
           <CardContent>
             <div className='text-center py-12'>
               <p className='text-3xl font-bold text-gray-900'>{summary?.totals.tradeCount || 0}</p>
-              <p className='text-gray-500 mt-2'>trades</p>
+              <p className='text-gray-500 mt-2'>giao dịch</p>
             </div>
           </CardContent>
         </Card>
@@ -174,7 +185,7 @@ export default function Reports() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Tax Report</CardTitle>
+          <CardTitle>Báo cáo thuế</CardTitle>
         </CardHeader>
         <CardContent>
           <div className='space-y-2'>
@@ -183,8 +194,8 @@ export default function Reports() {
               {formatCurrency(taxRealized?.totalRealizedPnlUsd || 0)}
             </p>
             <p className='text-xs text-gray-500'>
-              {taxRealized?.from ? new Date(taxRealized.from).toLocaleDateString() : '-'} -{' '}
-              {taxRealized?.to ? new Date(taxRealized.to).toLocaleDateString() : '-'}
+              {taxRealized?.from ? new Date(taxRealized.from).toLocaleDateString('vi-VN') : '-'} –{' '}
+              {taxRealized?.to ? new Date(taxRealized.to).toLocaleDateString('vi-VN') : '-'}
             </p>
           </div>
         </CardContent>
@@ -192,17 +203,17 @@ export default function Reports() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Performance by Coin</CardTitle>
+          <CardTitle>Hiệu suất theo coin</CardTitle>
         </CardHeader>
         <CardContent>
           <div className='overflow-x-auto'>
             <table className='w-full text-sm'>
               <thead>
                 <tr className='border-b border-gray-200'>
-                  <th className='text-left py-3 px-4 font-semibold text-gray-900'>Symbol</th>
-                  <th className='text-right py-3 px-4 font-semibold text-gray-900'>Trades</th>
-                  <th className='text-right py-3 px-4 font-semibold text-gray-900'>Cost Basis</th>
-                  <th className='text-right py-3 px-4 font-semibold text-gray-900'>Realized P&L</th>
+                  <th className='text-left py-3 px-4 font-semibold text-gray-900'>Mã</th>
+                  <th className='text-right py-3 px-4 font-semibold text-gray-900'>Giao dịch</th>
+                  <th className='text-right py-3 px-4 font-semibold text-gray-900'>Giá vốn</th>
+                  <th className='text-right py-3 px-4 font-semibold text-gray-900'>Lãi/lỗ đã thực hiện</th>
                 </tr>
               </thead>
               <tbody>
@@ -220,7 +231,7 @@ export default function Reports() {
                 ) : (
                   <tr className='border-b border-gray-100'>
                     <td colSpan={4} className='text-center py-8 text-gray-500'>
-                      No data available
+                      Chưa có dữ liệu
                     </td>
                   </tr>
                 )}

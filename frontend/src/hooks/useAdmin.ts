@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminAPI } from '../api/admin';
 import { toast } from 'sonner';
+import type { User } from '../types';
 
 export const useAdminUsers = (page: number = 1, limit: number = 10, search?: string) => {
   return useQuery({
@@ -20,15 +21,20 @@ export const useAdminUserDetail = (id: string | undefined) => {
 export const useAdminUpdateUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { name: string; email: string; role: 'USER' | 'ADMIN' } }) =>
-      adminAPI.updateUser(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<{ name: string; email: string; role: 'USER' | 'ADMIN'; status: User['status'] }>;
+    }) => adminAPI.updateUser(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'user', variables.id] });
-      toast.success('User updated successfully');
+      toast.success('Cập nhật người dùng thành công');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to update user');
+      toast.error(error.response?.data?.message || 'Cập nhật người dùng thất bại');
     },
   });
 };
@@ -39,10 +45,10 @@ export const useAdminDeleteUser = () => {
     mutationFn: (id: string) => adminAPI.deleteUser(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      toast.success('User deleted successfully');
+      toast.success('Đã xóa người dùng (xóa mềm)');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to delete user');
+      toast.error(error.response?.data?.message || 'Xóa người dùng thất bại');
     },
   });
 };
@@ -51,10 +57,10 @@ export const useAdminResetPassword = () => {
   return useMutation({
     mutationFn: (id: string) => adminAPI.resetUserPassword(id),
     onSuccess: (data) => {
-      toast.success(`Password reset. Temporary password: ${data.temporaryPassword}`);
+      toast.success(`${data.message} Mật khẩu mới: ${data.newPassword}`);
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to reset password');
+      toast.error(error.response?.data?.message || 'Đặt lại mật khẩu thất bại');
     },
   });
 };
@@ -62,15 +68,15 @@ export const useAdminResetPassword = () => {
 export const useAdminUpdateStatus = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'ACTIVE' | 'INACTIVE' }) =>
+    mutationFn: ({ id, status }: { id: string; status: User['status'] }) =>
       adminAPI.updateUserStatus(id, status),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'user', variables.id] });
-      toast.success('User status updated successfully');
+      toast.success('Cập nhật trạng thái thành công');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to update user status');
+      toast.error(error.response?.data?.message || 'Cập nhật trạng thái thất bại');
     },
   });
 };
