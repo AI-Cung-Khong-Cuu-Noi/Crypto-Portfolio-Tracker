@@ -21,6 +21,7 @@ import { formatCurrency, formatUsdOrDash, getColorClass } from '../../utils/form
 import { useEffect, useState, type FormEvent } from 'react';
 import type { Transaction } from '../../types';
 import { useRealtimePortfolioHoldings } from '../../hooks/useRealtimePortfolioHoldings';
+import { FlashValue } from '../../components/common/FlashValue';
 
 const transactionSchema = z.object({
   symbol: z.string().min(1, 'Vui lòng nhập mã coin'),
@@ -162,9 +163,15 @@ export default function PortfolioDetail() {
           </button>
           <div>
             <h1 className='text-3xl font-bold text-gray-900'>{portfolio.name}</h1>
-            {portfolio.description && (
-              <p className='text-gray-600 mt-1'>{portfolio.description}</p>
-            )}
+            <div className='flex items-center gap-3 mt-1'>
+              {portfolio.description && (
+                <p className='text-gray-600'>{portfolio.description}</p>
+              )}
+              <div className='flex items-center gap-2 px-2 py-0.5 bg-green-50 border border-green-100 rounded-full'>
+                <div className='w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse'></div>
+                <span className='text-[10px] font-bold text-green-700 uppercase'>Real-time</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -253,7 +260,9 @@ export default function PortfolioDetail() {
           <CardContent className='pt-6'>
             <p className='text-sm text-gray-500'>Tổng giá trị</p>
             <p className='text-2xl font-bold text-gray-900 mt-1'>
-              {formatCurrency(currentHoldingsSummary?.totalMarketValueUsd ?? 0)}
+              <FlashValue value={currentHoldingsSummary?.totalMarketValueUsd}>
+                {formatCurrency(currentHoldingsSummary?.totalMarketValueUsd ?? 0)}
+              </FlashValue>
             </p>
           </CardContent>
         </Card>
@@ -269,7 +278,9 @@ export default function PortfolioDetail() {
           <CardContent className='pt-6'>
             <p className='text-sm text-gray-500'>Lãi/lỗ</p>
             <p className={`text-2xl font-bold mt-1 ${getColorClass(currentHoldingsSummary?.totalUnrealizedPnlUsd ?? 0)}`}>
-              {formatCurrency(currentHoldingsSummary?.totalUnrealizedPnlUsd ?? 0)}
+              <FlashValue value={currentHoldingsSummary?.totalUnrealizedPnlUsd}>
+                {formatCurrency(currentHoldingsSummary?.totalUnrealizedPnlUsd ?? 0)}
+              </FlashValue>
             </p>
           </CardContent>
         </Card>
@@ -309,13 +320,25 @@ export default function PortfolioDetail() {
                           <td className='py-3 px-4 font-medium text-gray-900'>{holding.symbol}</td>
                           <td className='text-right py-3 px-4 text-gray-600'>{holding.quantity.toFixed(4)}</td>
                           <td className='text-right py-3 px-4 text-gray-600'>{formatCurrency(holding.avgCost)}</td>
-                          <td className='text-right py-3 px-4 text-gray-600'>{formatUsdOrDash(holding.currentPrice)}</td>
-                          <td className='text-right py-3 px-4 font-semibold text-gray-900'>{formatUsdOrDash(holding.totalValue)}</td>
+                          <td className='text-right py-3 px-4 text-gray-600'>
+                            <FlashValue value={holding.currentPrice}>
+                              {formatUsdOrDash(holding.currentPrice)}
+                            </FlashValue>
+                          </td>
+                          <td className='text-right py-3 px-4 font-semibold text-gray-900'>
+                            <FlashValue value={holding.totalValue}>
+                              {formatUsdOrDash(holding.totalValue)}
+                            </FlashValue>
+                          </td>
                           <td className={`text-right py-3 px-4 font-semibold ${getColorClass(holding.unrealizedPnL ?? 0)}`}>
-                            {formatUsdOrDash(holding.unrealizedPnL)}
+                            <FlashValue value={holding.unrealizedPnL}>
+                              {formatUsdOrDash(holding.unrealizedPnL)}
+                            </FlashValue>
                           </td>
                           <td className={`text-right py-3 px-4 font-semibold ${getColorClass(holding.change24h ?? 0)}`}>
-                            {holding.change24h != null ? `${holding.change24h.toFixed(2)}%` : '—'}
+                            <FlashValue value={holding.change24h}>
+                              {holding.change24h != null ? `${holding.change24h.toFixed(2)}%` : '—'}
+                            </FlashValue>
                           </td>
                         </tr>
                       ))}

@@ -26,6 +26,6 @@ export const useDashboardTrend = () => {
   return useQuery({
     queryKey: ['dashboard', 'trend'],
     queryFn: dashboardAPI.getTrend,
-    refetchInterval: 60000,
+    refetchInterval: 1000,
   });
 };

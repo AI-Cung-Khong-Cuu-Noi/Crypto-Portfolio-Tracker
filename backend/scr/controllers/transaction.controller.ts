@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { Portfolio } from '../models/portfolio.model';
 import { Transaction } from '../models/transaction.model';
 import { AuthRequest } from '../middlewares/auth.middleware';
+import { events, TRANSACTION_EVENTS } from '../utils/events';
 
 async function assertPortfolioOwnedByUser(portfolioId: string, userId: string | undefined) {
   const portfolio = await Portfolio.findOne({ _id: portfolioId, userId });
@@ -51,6 +52,14 @@ export const createTransaction = async (req: AuthRequest, res: Response, next: N
       message: 'Tạo giao dịch thành công',
       data: doc,
     });
+
+    // Notify realtime layer
+    if (req.user?.userId) {
+      events.emit(TRANSACTION_EVENTS.CHANGED, {
+        userId: req.user.userId,
+        portfolioId: portfolioId,
+      });
+    }
   } catch (error) {
     next(error);
   }
@@ -141,6 +150,14 @@ export const updateTransaction = async (req: AuthRequest, res: Response, next: N
       message: 'Cập nhật giao dịch thành công',
       data: tx,
     });
+
+    // Notify realtime layer
+    if (req.user?.userId) {
+      events.emit(TRANSACTION_EVENTS.CHANGED, {
+        userId: req.user.userId,
+        portfolioId: String(tx.portfolioId),
+      });
+    }
   } catch (error) {
     next(error);
   }
@@ -157,6 +174,14 @@ export const deleteTransaction = async (req: AuthRequest, res: Response, next: N
       success: true,
       message: 'Xóa giao dịch thành công',
     });
+
+    // Notify realtime layer
+    if (req.user?.userId) {
+      events.emit(TRANSACTION_EVENTS.CHANGED, {
+        userId: req.user.userId,
+        portfolioId: String(tx.portfolioId),
+      });
+    }
   } catch (error) {
     next(error);
   }

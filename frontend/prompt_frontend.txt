@@ -1,0 +1,98 @@
+PROMPT TẠO FRONTEND CHO CRYPTO PORTFOLIO APP
+Bạn là một Senior Fullstack Developer chuyên React + TypeScript + TailwindCSS + TanStack Query.
+Hãy xây dựng Frontend hoàn chỉnh cho ứng dụng quản lý danh mục đầu tư Crypto (Crypto Portfolio Management) dựa trên backend đã triển khai sẵn với các chức năng sau:
+1. Công nghệ & Cấu trúc dự án yêu cầu:
+
+React 18 + Vite
+TypeScript
+TailwindCSS + shadcn/ui + Radix UI
+TanStack Query (React Query) v5
+React Router v6.4+ (file-based routing hoặc nested routes)
+Zustand hoặc Context + TanStack Query cho state management
+Axios (có interceptor cho JWT)
+React Hook Form + Zod resolver
+Lucide React (icons)
+Date-fns hoặc dayjs
+Recharts hoặc Chart.js cho biểu đồ
+Socket.IO Client (cho realtime price)
+
+2. Các chức năng cần triển khai (phải khớp hoàn toàn với Backend):
+2.1 Quản lý Tài khoản & Xác thực
+
+Register (email + password + name)
+Login
+Verify OTP (hiển thị otpPreview trong dev mode)
+Resend OTP
+Forgot Password (gửi OTP reset)
+Profile: Xem và chỉnh sửa thông tin cá nhân (GET/PUT /api/users/me)
+Protected Route (dùng JWT)
+
+2.2 Quản lý Portfolio
+
+Danh sách Portfolio (GET /portfolios)
+Tạo Portfolio mới (POST)
+Xem chi tiết Portfolio
+Sửa Portfolio (name, description)
+Xóa Portfolio
+
+2.3 Holdings & Transactions
+
+Trang chi tiết Portfolio → tab Holdings
+Bảng holdings: Symbol, Quantity, Avg Cost, Current Price, Value, Unrealized P&L, 24h Change
+Summary card: Total Cost, Total Value, Total Unrealized P&L
+
+Tab Transactions
+CRUD Transaction: BUY / SELL / TRANSFER
+Bảng lịch sử giao dịch (phân trang)
+Filter theo portfolio
+
+
+2.5 Dashboard
+
+Trang Dashboard chính (sau khi login)
+Summary cards: Total Portfolio Value, Total Unrealized P&L, Realized P&L, Số portfolio
+Top 5 Gainers / Losers
+Allocation Pie Chart (theo % value)
+Performance chart (line chart: Market Value & Cost Basis theo thời gian - 7/30/90/365 ngày)
+Trend thị trường: Top coins tăng/giảm mạnh 24h
+
+2.6 Watchlist & Alerts
+
+Watchlist:
+Thêm symbol (có gợi ý CoinGecko)
+Danh sách + giá realtime + 24h change
+Xóa
+
+Alerts:
+Tạo cảnh báo: Price Above/Below, Change 24h Above/Below
+Danh sách alert + chỉnh sửa + bật/tắt
+
+Notifications (in-app):
+Danh sách thông báo
+Đánh dấu đã đọc / đọc hết
+
+
+2.7 Reports & Thống kê
+
+Báo cáo theo kỳ (day/month/year)
+Tax Report (Realized P&L)
+Performance theo từng coin
+Bộ lọc theo khoảng thời gian + portfolio
+
+2.8 Admin (chỉ hiển thị khi role = ADMIN)
+
+Quản lý Users (Admin panel)
+Danh sách user + phân trang + filter
+Xem chi tiết, chỉnh sửa, reset password, đổi status, soft delete
+
+3. Yêu cầu chung:
+
+Giao diện dark mode hiện đại, chuyên nghiệp, phù hợp với Crypto app (màu sắc: xanh dương, tím, xanh lá cho profit, đỏ cho loss)
+Responsive (mobile + desktop)
+Loading states, error handling, empty states đẹp
+Toast notification (sonner hoặc react-hot-toast)
+Form validation bằng Zod (đồng bộ với backend validation)
+Axios interceptor: tự động thêm Bearer token, refresh logic nếu cần, xử lý lỗi 401
+Socket.IO: kết nối realtime giá cho Watchlist và Holdings
+Sử dụng shadcn/ui components (Button, Card, Table, Dialog, Dropdown, Tabs, Chart, etc.)
+Code sạch, có comment rõ ràng, tách component hợp lý (hooks, services, types riêng)

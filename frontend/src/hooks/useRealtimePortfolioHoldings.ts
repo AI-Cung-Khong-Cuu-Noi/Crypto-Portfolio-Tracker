@@ -17,6 +17,12 @@ type RealtimeHoldingPayload = {
   unrealizedPnlUsd: number | null;
 };
 
+type PriceUpdateRow = {
+  symbol: string;
+  currentPriceUsd: number | null;
+  change24hPercent: number | null;
+};
+
 type PortfolioSocketPayload = {
   portfolioId: string | null;
   holdings?: RealtimeHoldingPayload[];
@@ -69,12 +75,52 @@ export function useRealtimePortfolioHoldings(portfolioId: string | undefined) {
       setRealtimeHoldingsData(mapPayloadToHoldingsResult(portfolioId, payload));
     };
 
+    const onPriceUpdate = (data: PriceUpdateRow[]) => {
+      if (!Array.isArray(data)) return;
+      setRealtimeHoldingsData((prev) => {
+        if (!prev) return prev;
+        const normalizedPrices = new Map(data.map((d) => [d.symbol.toUpperCase(), d]));
+        let changed = false;
+
+        const nextHoldings = prev.holdings.map((h) => {
+          const update = normalizedPrices.get(h.symbol.toUpperCase());
+          if (!update || update.currentPriceUsd === null) return h;
+
+          const newTotalValue = h.quantity * update.currentPriceUsd;
+          const newUnrealizedPnL = newTotalValue - (h.avgCost * h.quantity);
+          
+          if (h.currentPrice === update.currentPriceUsd) return h;
+          changed = true;
+
+          return {
+            ...h,
+            currentPrice: update.currentPriceUsd,
+            totalValue: newTotalValue,
+            unrealizedPnL: newUnrealizedPnL,
+            unrealizedPnLPercent: (h.avgCost > 0) ? newUnrealizedPnL / (h.avgCost * h.quantity) : 0,
+            change24h: update.change24hPercent,
+          };
+        });
+
+        if (!changed) return prev;
+
+        const nextSummary = {
+          totalCostBasisUsd: nextHoldings.reduce((sum, h) => sum + (h.avgCost * h.quantity), 0),
+          totalMarketValueUsd: nextHoldings.reduce((sum, h) => sum + (h.totalValue ?? 0), 0),
+          totalUnrealizedPnlUsd: nextHoldings.reduce((sum, h) => sum + (h.unrealizedPnL ?? 0), 0),
+        };
+
+        return { holdings: nextHoldings, summary: nextSummary };
+      });
+    };
+
     const subscribe = () => {
       socket.emit('dashboard:subscribe', { portfolioId });
     };
 
     socket.on('connect', subscribe);
     socket.on('dashboard:update', onDashboardUpdate);
+    socket.on('price:update', onPriceUpdate);
     if (socket.connected) {
       subscribe();
     }
@@ -82,6 +128,7 @@ export function useRealtimePortfolioHoldings(portfolioId: string | undefined) {
     return () => {
       socket.off('connect', subscribe);
       socket.off('dashboard:update', onDashboardUpdate);
+      socket.off('price:update', onPriceUpdate);
       socket.emit('dashboard:unsubscribe');
       socket.disconnect();
     };

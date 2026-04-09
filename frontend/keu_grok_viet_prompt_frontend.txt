@@ -1,0 +1,251 @@
+viết promt tạo frontend theo những chức năng của backend chức năng 2.1: Quản lý tài khoản & Xác thực (bản backend chạy được).
+ 
+Đã triển khai:
+ 
+Model
+scr/models/user.model.ts
+scr/models/otpToken.model.ts
+Auth/Profile API
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/verify-otp
+POST /api/auth/resend-otp
+POST /api/auth/forgot-password
+GET /api/users/me (JWT)
+PUT /api/users/me (JWT)
+Middleware & utils
+scr/middlewares/auth.middleware.ts (Bearer token)
+scr/middlewares/error.middleware.ts (thêm xử lý lỗi Zod)
+scr/utils/token.ts (sign/verify JWT)
+scr/utils/otp.ts (OTP generator + expiry)
+Validation (Zod)
+scr/validations/auth.validation.ts
+scr/validations/user.validation.ts
+Router wiring
+scr/routers/auth.router.ts
+scr/routers/user.router.ts
+cập nhật scr/routers/index.ts
+Config/typing
+cập nhật scr/config/env.ts (thêm JWT_SECRET, JWT_EXPIRES_IN)
+thêm type augmentation cho Express Request: scr/types/express/index.d.ts
+cập nhật tsconfig.json để nhận custom types
+cài thêm @types/bcrypt
+cập nhật .env.example (thêm OTP_EXPIRES_MINUTES)
+Kết quả kiểm tra:
+ 
+npm run build ✅ thành công
+Linter hiện tại ✅ không lỗi
+Lưu ý nhanh:
+ 
+OTP hiện tại trả về otpPreview trong response để dev/test nhanh; khi production nên gửi qua email/SMS và bỏ field này.
+forgot-password hiện mới tạo OTP reset, chưa có endpoint đổi mật khẩu mới (mình có thể làm ở bước tiếp theo).
+chức năng 2.2 – Portfolio cho backend, chạy build thành công.
+ 
+Các phần mình đã thêm:
+ 
+backend/scr/models/portfolio.model.ts
+ 
+Model Portfolio: userId, name, description, created_at, updated_at
+Có index theo userId
+backend/scr/validations/portfolio.validation.ts
+ 
+createPortfolioSchema
+updatePortfolioSchema
+portfolioIdParamSchema (validate ObjectId)
+backend/scr/controllers/portfolio.controller.ts
+ 
+createPortfolio
+getPortfolios
+getPortfolioById
+updatePortfolio
+deletePortfolio
+Tất cả đều giới hạn theo userId từ token (user chỉ thao tác portfolio của chính mình)
+backend/scr/routers/portfolio.router.ts
+ 
+Routes:
+POST /portfolios
+GET /portfolios
+GET /portfolios/:id
+PUT /portfolios/:id
+DELETE /portfolios/:id
+Có authenticateToken + validate(...)
+backend/scr/app.ts
+ 
+Mount route mới: app.use('/portfolios', portfolioRoutes);
+backend/scr/swagger/schemas/portfolio.schemas.ts
+ 
+Bổ sung tài liệu Swagger cho toàn bộ API portfolio
+Kiểm tra:
+ 
+Không có lỗi lint ở các file vừa sửa
+npm run build trong backend đã pass
+Đã triển khai xong 2.3 – Holdings (tính từ giao dịch + giá CoinGecko). Vì trong repo chưa có transactions, mình đã thêm luôn model + API /transactions để có dữ liệu cho holdings (đúng với mô tả “tính động từ transactions”).
+ 
+API Holdings
+GET /portfolios/:id/holdings (JWT)
+Chỉ portfolio của user hiện tại.
+Gom giao dịch theo thời gian, tính số lượng còn lại, cost basis USD, giá hiện tại, change24h, giá trị, unrealized P&L.
+summary: totalCostBasisUsd, totalMarketValueUsd, totalUnrealizedPnlUsd, symbolsMissingPrice (coin không map được giá).
+Logic tổng hợp
+backend/scr/services/holdings.service.ts: aggregateHoldingsFromTransactions + enrichHoldingsWithMarket
+BUY: tăng số lượng + cost (ưu tiên totalValue, không thì amount * price + fee)
+SELL: trừ theo giá vốn bình quân
+TRANSFER: bắt buộc transferDirection: IN / OUT (IN cộng qty/cost, OUT giống rút vốn theo avg cost)
+Giá thị trường
+backend/scr/utils/coingecko.util.ts: map symbol → CoinGecko id (bảng tĩnh phổ biến + search), gọi /simple/price (USD + 24h change).
+Transactions (để holdings có dữ liệu)
+Model: backend/scr/models/transaction.model.ts
+Routes (JWT): backend/scr/routers/transaction.router.ts, mount trong app.ts: /transactions
+POST /transactions
+GET /transactions?portfolioId=&page=&limit=
+PUT /transactions/:id
+DELETE /transactions/:id
+Router portfolio
+Thêm GET /:id/holdings trước GET /:id trong portfolio.router.ts.
+Swagger
+backend/scr/swagger/schemas/holdings.schemas.ts
+backend/scr/swagger/schemas/transaction.schemas.ts
+npm run build đã chạy thành công.
+ 
+Lưu ý: CoinGecko bản miễn phí có rate limit; nếu nhiều symbol lạ, nên gửi kèm coinGeckoId trên giao dịch để giảm search và ổn định giá.
+Đã triển khai mục 2.5 – Dashboard & phân tích (bước tiếp theo sau Holdings/Transactions trong mo_ta.md).
+ 
+API (JWT, prefix /dashboard)
+Method          Path    Mô tả
+GET    /dashboard/summary           Query portfolioId? — tổng giá trị, cost basis, unrealized + realized P&L, totalPnlUsd, số portfolio, top 5 gainers/losers trong holdings của bạn
+GET    /dashboard/allocation          Query portfolioId? — phân bổ theo valueUsd + % (pie chart)
+GET    /dashboard/performance     Query portfolioId?, days (mặc định 30, tối đa 365) — điểm theo ngày: totalMarketValueUsd + totalCostBasisUsd (có note về cách ước tính)
+GET    /dashboard/trend      Query perPage (mặc định 10) — top tăng/giảm mạnh 24h toàn thị trường (CoinGecko coins/markets)
+Logic chính
+holdings.service.ts: aggregatePositionsAndRealized() — P&L realized khi SELL (proceeds − cost bình quân đã bán). aggregateHoldingsFromTransactions() giờ gọi hàm này và chỉ lấy positions.
+dashboard.service.ts: lookup giá theo symbol, chuỗi performance (giá spot tại thời điểm gọi API áp lên số dư lịch sử — có note trong response).
+coingecko.util.ts: fetchUsdMarketsBy24hChange() cho /dashboard/trend.
+File mới / chỉnh
+scr/services/dashboard.service.ts
+scr/controllers/dashboard.controller.ts
+scr/routers/dashboard.router.ts
+scr/validations/dashboard.validation.ts
+scr/swagger/schemas/dashboard.schemas.ts
+scr/app.ts — app.use('/dashboard', dashboardRoutes)
+npm run build đã chạy thành công.
+Đã triển khai 2.6 Watchlist & cảnh báo theo hướng: API CRUD + thông báo in-app + email + cron kiểm tra giá (CoinGecko). WebSocket chưa làm (spec cho phép cron hoặc WebSocket).
+ 
+Watchlist — /watchlist (JWT)
+Method          Path    Mô tả
+POST  /watchlist       Body: symbol, coinGeckoId? — unique theo user + symbol
+GET    /watchlist       Danh sách kèm currentPriceUsd, change24hPercent
+DELETE         /watchlist/:id Xóa theo _id
+Cảnh báo — /alerts (JWT)
+Method          Path    Mô tả
+POST  /alerts symbol, coinGeckoId?, kind, threshold, isActive?, cooldownMinutes? (mặc định 60)
+GET    /alerts Danh sách
+PATCH           /alerts/:id       Cập nhật một phần
+DELETE         /alerts/:id       Xóa
+kind:
+ 
+PRICE_ABOVE / PRICE_BELOW: threshold = giá USD
+CHANGE_24H_ABOVE: kích hoạt khi %24h ≥ threshold (ví dụ 5 = 5%)
+CHANGE_24H_BELOW: kích hoạt khi %24h ≤ -threshold
+Thông báo in-app — /notifications (JWT)
+Method          Path    Mô tả
+GET    /notifications Query: page, limit, unreadOnly
+PATCH           /notifications/:id/read          Đánh dấu đã đọc
+POST  /notifications/read-all          Đọc hết
+Cron (server.ts)
+Gói node-cron đã được thêm vào package.json.
+Job: scr/jobs/alertChecker.job.ts → evaluateAlertsAndNotify()
+Lịch mặc định: */5 * * * * (mỗi 5 phút), đổi bằng biến môi trường ALERT_CRON (cron expression).
+Khi điều kiện đúng và hết cooldown: cập nhật lastTriggeredAt, tạo bản ghi Notification, gửi email (sendMail) tới email user.
+File chính
+Models: watchlistItem.model.ts, alert.model.ts, notification.model.ts
+Utils: fetchUsdPricesForSymbols trong coingecko.util.ts (dùng cho watchlist)
+Swagger: watchlist.schemas.ts, alert.schemas.ts, notification.schemas.ts
+app.ts: mount /watchlist, /alerts, /notifications
+npm run build đã chạy thành công.
+ 
+Lưu ý: Cần cấu hình EMAIL_USER / EMAIL_PASS để gửi mail; CoinGecko có rate limit — có thể tăng khoảng cách cron hoặc hạn chế số cảnh báo. Nếu bạn muốn thêm WebSocket đẩy giá realtime, có thể làm bước tiếp theo.
+Đã thêm WebSocket đẩy giá realtime bằng Socket.IO.
+ 
+Các thay đổi chính:
+ 
+Thêm file backend/scr/realtime/price.socket.ts
+ 
+Xác thực socket bằng JWT (handshake.auth.token hoặc header Authorization: Bearer ...)
+Event hỗ trợ:
+price:subscribe → subscribe danh sách symbol
+price:unsubscribe → unsubscribe symbol
+price:watchlist → tự load symbol từ watchlist của user
+Server emit:
+price:connected
+price:subscribed
+price:update (giá + % thay đổi 24h)
+price:error
+Push theo chu kỳ WS_PRICE_INTERVAL_MS (mặc định 15000ms)
+Cập nhật backend/scr/server.ts
+ 
+Dùng createServer(app) thay vì app.listen(...)
+Gắn setupPriceSocket(httpServer)
+Vẫn giữ cron alert như cũ
+Cài dependency:
+ 
+socket.io
+Xác nhận:
+ 
+npm run build pass
+Không có lint errors cho các file mới/sửa
+Cách client dùng nhanh:
+ 
+Kết nối socket kèm token
+Gửi:
+price:subscribe với { symbols: ["BTC","ETH"] }
+hoặc price:watchlist để lấy theo watchlist user
+Lắng nghe price:update
+Đã triển khai 2.7 Báo cáo & Thống kê (API JSON). Export PDF/Excel trong mo_ta.md thuộc giai đoạn 3 nên chưa làm.
+ 
+API mới — /reports (JWT)
+Method          Path    Mô tả
+GET    /reports/summary     Báo cáo theo ngày / tháng / năm (granularity: day | month | year, mặc định month). Query: portfolioId?, from?, to? (không gửi → cả năm UTC hiện tại). Mỗi bucket: tradeCount, buyVolumeUsd, sellVolumeUsd, realizedPnlUsd + totals.
+GET    /reports/tax-realized Tax / realized P&L: từng lệnh SELL trong khoảng thời gian với proceedsUsd, costBasisUsd, realizedPnlUsd (cùng logic giá vốn bình quân như holdings). Có totalRealizedPnlUsd + description nhắc xác minh với kế toán.
+GET    /reports/by-coin        Performance theo coin: khối lượng mua/bán, realized lifetime, số lệnh, transfer, vị thế mở (currentQuantity, costBasisUsd, …). Query includeMarket=true để thêm giá hiện tại / unrealized (CoinGecko). from/to (tùy chọn) để có thêm realizedPnlUsdInRange.
+Logic & file
+scr/services/reports.service.ts — runTransactionLedgerAnalysis, buildPeriodReport, filterSellLedgerByRange, buildCoinPerformanceRows (dùng buyCost / sellProceedsUsd đã export từ holdings.service.ts).
+scr/controllers/reports.controller.ts, scr/routers/reports.router.ts, scr/validations/reports.validation.ts
+scr/swagger/schemas/reports.schemas.ts
+app.ts: app.use('/reports', reportsRoutes)
+transaction.model.ts: thêm index { userId: 1, date: -1 } cho truy vấn báo cáo.
+npm run build đã pass.
+ 
+Nếu bạn muốn bước tiếp theo: export CSV (nhẹ, không cần thư viện PDF) hoặc full 2.8 Admin.
+Đã làm xong chức năng Admin quản lý người dùng cho backend.
+ 
+Các phần mình đã thêm:
+ 
+Thêm phân quyền role trong auth middleware:
+authorizeRoles(...roles) để chặn route không phải Admin.
+Tạo module mới cho admin users:
+backend/scr/controllers/admin.user.controller.ts
+backend/scr/routers/admin.user.router.ts
+backend/scr/validations/admin.validation.ts
+Gắn router vào app:
+app.use('/admin/users', adminUserRoutes) trong backend/scr/app.ts
+Bổ sung soft delete cho user model:
+thêm trường deleted_at trong backend/scr/models/user.model.ts
+API đã có:
+ 
+GET /admin/users
+hỗ trợ filter: email, name, role, status
+hỗ trợ phân trang: page, limit
+GET /admin/users/:id
+PUT /admin/users/:id (update name, email, role, status)
+POST /admin/users/:id/reset-password (body: newPassword)
+PATCH /admin/users/:id/status (body: status)
+DELETE /admin/users/:id (soft delete: set deleted_at, đồng thời status = BANNED)
+Xác thực/bảo vệ route:
+ 
+Tất cả route /admin/users/* bắt buộc:
+có token hợp lệ (authenticateToken)
+role ADMIN (authorizeRoles('ADMIN'))
+Kiểm tra:
+ 
+Build TypeScript thành công (npm run build)
+Không có lỗi lint ở các file đã sửa.
