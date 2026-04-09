@@ -2,7 +2,7 @@
  * @swagger
  * tags:
  *   name: Holdings
- *   description: Holdings computed from transactions + market prices (CoinGecko)
+ *   description: Holdings computed from transactions + Binance Spot market prices
  *
  * /portfolios/{id}/holdings:
  *   get:

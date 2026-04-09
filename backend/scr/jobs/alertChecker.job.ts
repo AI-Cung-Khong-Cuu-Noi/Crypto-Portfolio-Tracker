@@ -1,14 +1,11 @@
 import { Alert, AlertKind, IAlert } from '../models/alert.model';
 import { Notification } from '../models/notification.model';
 import { User } from '../models/user.model';
-import {
-  CoinGeckoUsdQuote,
-  fetchUsdQuotesByCoinIds,
-  resolveCoinGeckoId,
-} from '../utils/coingecko.util';
+import type { MarketQuote } from '../services/holdings.service';
+import { binanceRealtimeService } from '../services/binanceRealtime.service';
 import { sendMail } from '../utils/mailer.util';
 
-function isAlertTriggered(alert: IAlert, quote: CoinGeckoUsdQuote): boolean {
+function isAlertTriggered(alert: IAlert, quote: MarketQuote): boolean {
   const usd = quote.usd;
   const chg = quote.usd_24h_change;
   const t = alert.threshold;
@@ -27,7 +24,7 @@ function isAlertTriggered(alert: IAlert, quote: CoinGeckoUsdQuote): boolean {
   }
 }
 
-function buildAlertMessage(alert: IAlert, quote: CoinGeckoUsdQuote): string {
+function buildAlertMessage(alert: IAlert, quote: MarketQuote): string {
   const usd = quote.usd;
   const chg = quote.usd_24h_change;
   const lines = [
@@ -40,7 +37,7 @@ function buildAlertMessage(alert: IAlert, quote: CoinGeckoUsdQuote): string {
   return lines.join('\n');
 }
 
-function buildAlertEmailHtml(alert: IAlert, quote: CoinGeckoUsdQuote): string {
+function buildAlertEmailHtml(alert: IAlert, quote: MarketQuote): string {
   const usd = quote.usd;
   const chg = quote.usd_24h_change;
   const kindLabelMap: Record<AlertKind, string> = {
@@ -111,23 +108,16 @@ export async function evaluateAlertsAndNotify(): Promise<void> {
     return;
   }
 
-  const idByAlertKey = new Map<string, string | null>();
-  for (const a of alerts) {
-    const id = await resolveCoinGeckoId(a.symbol, a.coinGeckoId);
-    idByAlertKey.set(String(a._id), id);
-  }
-
-  const uniqueIds = [...new Set([...idByAlertKey.values()].filter(Boolean))] as string[];
-  const quotes = uniqueIds.length > 0 ? await fetchUsdQuotesByCoinIds(uniqueIds) : {};
+  const symbols = [...new Set(alerts.map((a) => String(a.symbol).toUpperCase()))];
+  const quotesMap = await binanceRealtimeService.getQuotesForSymbols(symbols);
 
   for (const alert of alerts) {
-    const id = idByAlertKey.get(String(alert._id));
-    if (!id) {
+    const sym = String(alert.symbol).toUpperCase();
+    const q = quotesMap.get(sym);
+    if (!q) {
       continue;
     }
-
-    const q = quotes[id];
-    if (!q) {
+    if (q.usd == null && q.usd_24h_change == null) {
       continue;
     }
 
@@ -150,7 +140,7 @@ export async function evaluateAlertsAndNotify(): Promise<void> {
       continue;
     }
 
-    const title = `[Crypto Tracker] Cảnh báo ${alert.symbol}`;
+    const title = `[Crypto Portfolio Tracker] Cảnh báo ${alert.symbol}`;
     const body = buildAlertMessage(alert, q);
 
     await Notification.create({

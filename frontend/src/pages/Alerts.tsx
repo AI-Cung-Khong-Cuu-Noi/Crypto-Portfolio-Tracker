@@ -5,7 +5,7 @@ import { Input } from '../components/ui/Input';
 import { Label } from '../components/ui/Label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/Dialog';
 import { Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -21,7 +21,7 @@ type AlertForm = z.infer<typeof alertSchema>;
 export default function Alerts() {
   const [isOpen, setIsOpen] = useState(false);
   const [deletingAlertId, setDeletingAlertId] = useState<string | null>(null);
-  const { data: alerts, isLoading } = useAlerts();
+  const { data: alerts, isLoading, refetch } = useAlerts();
   const { mutate: createAlert, isPending: isCreating } = useCreateAlert();
   const { mutate: updateAlert, isPending: isUpdating } = useUpdateAlert();
   const { mutate: deleteAlert, isPending: isDeleting } = useDeleteAlert();
@@ -43,6 +43,10 @@ export default function Alerts() {
       },
     });
   };
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   if (isLoading) {
     return <div className='p-6 text-center'>Đang tải cảnh báo...</div>;

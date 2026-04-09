@@ -34,18 +34,18 @@ const mapPortfolio = (doc: PortfolioDoc): Portfolio => ({
 
 const mapHolding = (portfolioId: string, h: HoldingDoc): Holding => {
   const cost = h.costBasisUsd ?? 0;
-  const unrealized = h.unrealizedPnlUsd ?? 0;
+  const unrealized = h.unrealizedPnlUsd ?? null;
   return {
     id: `${portfolioId}-${h.symbol}`,
     portfolioId,
     symbol: h.symbol,
     quantity: h.quantity,
     avgCost: h.averageCostUsd ?? 0,
-    currentPrice: h.currentPriceUsd ?? 0,
-    totalValue: h.valueUsd ?? 0,
+    currentPrice: h.currentPriceUsd ?? null,
+    totalValue: h.valueUsd ?? null,
     unrealizedPnL: unrealized,
-    unrealizedPnLPercent: cost > 0 ? unrealized / cost : 0,
-    change24h: h.change24hPercent ?? 0,
+    unrealizedPnLPercent: cost > 0 && unrealized != null ? unrealized / cost : 0,
+    change24h: h.change24hPercent ?? null,
   };
 };
 
@@ -95,6 +95,7 @@ export const portfoliosAPI = {
           totalMarketValueUsd: number;
           totalUnrealizedPnlUsd: number;
         };
+        meta?: unknown;
       };
     }>(`/portfolios/${id}/holdings`);
 

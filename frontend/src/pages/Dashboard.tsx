@@ -3,32 +3,50 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 import { formatCurrency, getColorClass } from '../utils/format';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '../components/ui/Button';
+import { useRealtimeDashboard } from '../hooks/useRealtimeDashboard';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
 export default function Dashboard() {
   const [performanceDays, setPerformanceDays] = useState(7);
-  const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
-  const { data: allocation, isLoading: allocationLoading } = useDashboardAllocation();
-  const { data: performance, isLoading: performanceLoading } = useDashboardPerformance(performanceDays);
-  const { data: trend } = useDashboardTrend();
+  const { realtimeSummary, realtimeAllocation } = useRealtimeDashboard();
+  const { data: summary, isLoading: summaryLoading, refetch: refetchSummary } = useDashboardSummary();
+  const { data: allocation, isLoading: allocationLoading, refetch: refetchAllocation } = useDashboardAllocation();
+  const {
+    data: performance,
+    isLoading: performanceLoading,
+    refetch: refetchPerformance,
+  } = useDashboardPerformance(performanceDays);
+  const { data: trend, refetch: refetchTrend } = useDashboardTrend();
 
-  if (summaryLoading) {
+  useEffect(() => {
+    refetchSummary();
+    refetchAllocation();
+    refetchPerformance();
+    refetchTrend();
+  }, [refetchSummary, refetchAllocation, refetchPerformance, refetchTrend]);
+
+  const currentSummary = realtimeSummary ?? summary;
+  const currentAllocation = realtimeAllocation ?? allocation;
+
+  // Cho phép hiển thị ngay khi WebSocket đã gửi snapshot (không chờ REST)
+  const summaryBlocking = summaryLoading && realtimeSummary === null && summary === undefined;
+  if (summaryBlocking) {
     return <div className='p-6 text-center'>Đang tải bảng điều khiển...</div>;
   }
 
   return (
     <div className='p-6 space-y-6'>
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
         <Card>
           <CardContent className='pt-6'>
             <div className='flex items-center justify-between'>
               <div>
                 <p className='text-sm text-gray-500'>Tổng giá trị danh mục</p>
                 <p className='text-2xl font-bold text-gray-900 mt-1'>
-                  {formatCurrency(summary?.totalMarketValueUsd || 0)}
+                  {formatCurrency(currentSummary?.totalMarketValueUsd || 0)}
                 </p>
               </div>
               <div className='w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center'>
@@ -42,15 +60,15 @@ export default function Dashboard() {
           <CardContent className='pt-6'>
             <div className='flex items-center justify-between'>
               <div>
-                <p className='text-sm text-gray-500'>Lãi/lỗ chưa thực hiện</p>
-                <p className={`text-2xl font-bold mt-1 ${getColorClass(summary?.totalUnrealizedPnlUsd || 0)}`}>
-                  {formatCurrency(summary?.totalUnrealizedPnlUsd || 0)}
+                <p className='text-sm text-gray-500'>Lãi/lỗ</p>
+                <p className={`text-2xl font-bold mt-1 ${getColorClass(currentSummary?.totalUnrealizedPnlUsd || 0)}`}>
+                  {formatCurrency(currentSummary?.totalUnrealizedPnlUsd || 0)}
                 </p>
               </div>
               <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                (summary?.totalUnrealizedPnlUsd || 0) >= 0 ? 'bg-green-100' : 'bg-red-100'
+                (currentSummary?.totalUnrealizedPnlUsd || 0) >= 0 ? 'bg-green-100' : 'bg-red-100'
               }`}>
-                {(summary?.totalUnrealizedPnlUsd || 0) >= 0 ? (
+                {(currentSummary?.totalUnrealizedPnlUsd || 0) >= 0 ? (
                   <TrendingUp className='text-green-600' size={24} />
                 ) : (
                   <TrendingDown className='text-red-600' size={24} />
@@ -60,34 +78,14 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className='pt-6'>
-            <div className='flex items-center justify-between'>
-              <div>
-                <p className='text-sm text-gray-500'>Lãi/lỗ đã thực hiện</p>
-                <p className={`text-2xl font-bold mt-1 ${getColorClass(summary?.totalRealizedPnlUsd || 0)}`}>
-                  {formatCurrency(summary?.totalRealizedPnlUsd || 0)}
-                </p>
-              </div>
-              <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                (summary?.totalRealizedPnlUsd || 0) >= 0 ? 'bg-green-100' : 'bg-red-100'
-              }`}>
-                {(summary?.totalRealizedPnlUsd || 0) >= 0 ? (
-                  <TrendingUp className='text-green-600' size={24} />
-                ) : (
-                  <TrendingDown className='text-red-600' size={24} />
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        
 
         <Card>
           <CardContent className='pt-6'>
             <div className='flex items-center justify-between'>
               <div>
                 <p className='text-sm text-gray-500'>Portfolios</p>
-                <p className='text-2xl font-bold text-gray-900 mt-1'>{summary?.portfolioCount || 0}</p>
+                <p className='text-2xl font-bold text-gray-900 mt-1'>{currentSummary?.portfolioCount || 0}</p>
               </div>
               <div className='w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center'>
                 <span className='text-purple-600 text-lg font-bold'>📊</span>
@@ -147,13 +145,13 @@ export default function Dashboard() {
             <CardTitle>Phân bổ</CardTitle>
           </CardHeader>
           <CardContent>
-            {allocationLoading ? (
+            {allocationLoading && !currentAllocation ? (
               <div className='h-80 flex items-center justify-center text-gray-500'>Đang tải biểu đồ...</div>
-            ) : allocation && allocation.length > 0 ? (
+            ) : currentAllocation && currentAllocation.length > 0 ? (
               <ResponsiveContainer width='100%' height={300}>
                 <PieChart>
                   <Pie
-                    data={allocation}
+                    data={currentAllocation}
                     cx='50%'
                     cy='50%'
                     labelLine={false}
@@ -162,7 +160,7 @@ export default function Dashboard() {
                     fill='#8884d8'
                     dataKey='valueUsd'
                   >
-                    {allocation.map((_, index) => (
+                    {currentAllocation.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -181,9 +179,9 @@ export default function Dashboard() {
             <CardTitle>Tăng mạnh nhất</CardTitle>
           </CardHeader>
           <CardContent>
-            {summary && summary.topGainers && summary.topGainers.length > 0 ? (
+            {currentSummary && currentSummary.topGainers && currentSummary.topGainers.length > 0 ? (
               <div className='space-y-3'>
-                {summary.topGainers.map((coin) => (
+                {currentSummary.topGainers.map((coin) => (
                   <div key={coin.symbol} className='flex items-center justify-between p-3 bg-green-50 rounded-lg'>
                     <div>
                       <p className='font-medium text-gray-900'>{coin.symbol}</p>
@@ -192,7 +190,7 @@ export default function Dashboard() {
                       </p>
                     </div>
                     <div className='text-right'>
-                      <p className='font-medium text-green-600'>+{(coin.change24hPercent || 0).toFixed(2)}%</p>
+                      <p className='font-medium text-green-600'>{(coin.change24hPercent || 0).toFixed(2)}%</p>
                       <p className='text-sm text-green-600'>{formatCurrency(coin.unrealizedPnlUsd || 0)}</p>
                     </div>
                   </div>
@@ -209,9 +207,9 @@ export default function Dashboard() {
             <CardTitle>Giảm mạnh nhất</CardTitle>
           </CardHeader>
           <CardContent>
-            {summary && summary.topLosers && summary.topLosers.length > 0 ? (
+            {currentSummary && currentSummary.topLosers && currentSummary.topLosers.length > 0 ? (
               <div className='space-y-3'>
-                {summary.topLosers.map((coin) => (
+                {currentSummary.topLosers.map((coin) => (
                   <div key={coin.symbol} className='flex items-center justify-between p-3 bg-red-50 rounded-lg'>
                     <div>
                       <p className='font-medium text-gray-900'>{coin.symbol}</p>

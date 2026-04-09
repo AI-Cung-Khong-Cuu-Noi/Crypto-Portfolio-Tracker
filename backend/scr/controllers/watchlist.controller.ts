@@ -1,7 +1,8 @@
 import { Response, NextFunction } from 'express';
 import { WatchlistItem } from '../models/watchlistItem.model';
 import { AuthRequest } from '../middlewares/auth.middleware';
-import { fetchUsdPricesForSymbols } from '../utils/coingecko.util';
+import { binanceRealtimeService } from '../services/binanceRealtime.service';
+import { attachRealtimePriceHeaders } from '../utils/realtimeMeta.util';
 
 export const addWatchlistItem = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -15,10 +16,22 @@ export const addWatchlistItem = async (req: AuthRequest, res: Response, next: Ne
         coinGeckoId: coinGeckoId?.toLowerCase(),
       });
 
+      const pricedAt = new Date().toISOString();
+      attachRealtimePriceHeaders(res, pricedAt);
+      const priceMap = await binanceRealtimeService.getQuotesForSymbols([sym]);
+      const q = priceMap.get(sym) ?? { usd: null, usd_24h_change: null };
+
       return res.status(201).json({
         success: true,
         message: 'Đã thêm vào watchlist',
-        data: item,
+        data: {
+          _id: item._id,
+          symbol: item.symbol,
+          coinGeckoId: item.coinGeckoId,
+          currentPriceUsd: q.usd,
+          change24hPercent: q.usd_24h_change,
+          created_at: item.created_at,
+        },
       });
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'code' in err && (err as { code?: number }).code === 11000) {
@@ -33,16 +46,19 @@ export const addWatchlistItem = async (req: AuthRequest, res: Response, next: Ne
 
 export const getWatchlist = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
+    const pricedAt = new Date().toISOString();
+    attachRealtimePriceHeaders(res, pricedAt);
+
     const items = await WatchlistItem.find({ userId: req.user?.userId }).sort({ created_at: -1 });
-    const priceMap = await fetchUsdPricesForSymbols(
-      items.map((i) => ({ symbol: i.symbol, coinGeckoId: i.coinGeckoId }))
-    );
+    const symbols = items.map((i) => String(i.symbol).trim().toUpperCase());
+    const priceMap = await binanceRealtimeService.getQuotesForSymbols(symbols);
 
     const data = items.map((i) => {
-      const q = priceMap.get(i.symbol) ?? { usd: null, usd_24h_change: null };
+      const sym = String(i.symbol).trim().toUpperCase();
+      const q = priceMap.get(sym) ?? { usd: null, usd_24h_change: null };
       return {
         _id: i._id,
-        symbol: i.symbol,
+        symbol: sym,
         coinGeckoId: i.coinGeckoId,
         currentPriceUsd: q.usd,
         change24hPercent: q.usd_24h_change,

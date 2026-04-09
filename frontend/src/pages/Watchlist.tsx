@@ -1,11 +1,12 @@
 import { useWatchlist, useAddToWatchlist, useRemoveFromWatchlist } from '../hooks/useWatchlist';
+import { useRealtimeWatchlistQuotes } from '../hooks/useRealtimeWatchlist';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/Dialog';
 import { Plus, Trash2 } from 'lucide-react';
 import { formatCurrency, getColorClass } from '../utils/format';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 export default function Watchlist() {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,6 +15,9 @@ export default function Watchlist() {
   const { data: watchlist, isLoading } = useWatchlist();
   const { mutate: addToWatchlist, isPending: isAdding } = useAddToWatchlist();
   const { mutate: removeFromWatchlist, isPending: isRemoving } = useRemoveFromWatchlist();
+
+  const watchlistSymbols = useMemo(() => watchlist?.map((c) => c.symbol) ?? [], [watchlist]);
+  const liveQuotes = useRealtimeWatchlistQuotes(watchlistSymbols);
 
   const handleAdd = () => {
     if (symbol.trim()) {
@@ -79,12 +83,23 @@ export default function Watchlist() {
                   </tr>
                 </thead>
                 <tbody>
-                  {watchlist.map((coin) => (
+                  {watchlist.map((coin) => {
+                    const sym = coin.symbol.trim().toUpperCase();
+                    const live = liveQuotes[sym];
+                    const displayPrice =
+                      live?.currentPriceUsd != null && !Number.isNaN(live.currentPriceUsd)
+                        ? live.currentPriceUsd
+                        : coin.price;
+                    const displayChange =
+                      live?.change24hPercent != null && !Number.isNaN(live.change24hPercent)
+                        ? live.change24hPercent
+                        : coin.change24h;
+                    return (
                     <tr key={coin.id} className='border-b border-gray-100 hover:bg-gray-50'>
                       <td className='py-3 px-4 font-medium text-gray-900'>{coin.symbol}</td>
-                      <td className='text-right py-3 px-4 text-gray-600'>{formatCurrency(coin.price)}</td>
-                      <td className={`text-right py-3 px-4 font-semibold ${getColorClass(coin.change24h)}`}>
-                        {coin.change24h.toFixed(2)}%
+                      <td className='text-right py-3 px-4 text-gray-600'>{formatCurrency(displayPrice)}</td>
+                      <td className={`text-right py-3 px-4 font-semibold ${getColorClass(displayChange)}`}>
+                        {displayChange.toFixed(2)}%
                       </td>
                       <td className='text-right py-3 px-4 text-gray-600'>
                         {coin.marketCap ? formatCurrency(coin.marketCap) : 'Không có'}
@@ -99,7 +114,8 @@ export default function Watchlist() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

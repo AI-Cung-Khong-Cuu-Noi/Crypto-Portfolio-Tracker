@@ -17,9 +17,10 @@ import { ArrowLeft, CreditCard as Edit2, Trash2, Plus } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { formatCurrency, getColorClass } from '../../utils/format';
-import { useState, type FormEvent } from 'react';
+import { formatCurrency, formatUsdOrDash, getColorClass } from '../../utils/format';
+import { useEffect, useState, type FormEvent } from 'react';
 import type { Transaction } from '../../types';
+import { useRealtimePortfolioHoldings } from '../../hooks/useRealtimePortfolioHoldings';
 
 const transactionSchema = z.object({
   symbol: z.string().min(1, 'Vui lòng nhập mã coin'),
@@ -54,17 +55,28 @@ export default function PortfolioDetail() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
+  const realtimeHoldingsData = useRealtimePortfolioHoldings(id);
 
-  const { data: portfolio, isLoading: portfolioLoading } = usePortfolioDetail(id);
-  const { data: holdingsData, isLoading: holdingsLoading } = usePortfolioHoldings(id);
+  const { data: portfolio, isLoading: portfolioLoading, refetch: refetchPortfolio } = usePortfolioDetail(id);
+  const { data: holdingsData, isLoading: holdingsLoading, refetch: refetchHoldings } = usePortfolioHoldings(id);
   const holdings = holdingsData?.holdings;
   const holdingsSummary = holdingsData?.summary;
-  const { data: transactions, isLoading: transactionsLoading } = useTransactions(1, 10, id);
+  const { data: transactions, isLoading: transactionsLoading, refetch: refetchTransactions } = useTransactions(1, 10, id);
   const { mutate: updatePortfolio, isPending: isUpdating } = useUpdatePortfolio();
   const { mutate: deletePortfolio, isPending: isDeleting } = useDeletePortfolio();
   const { mutate: createTransaction, isPending: isCreatingTx } = useCreateTransaction();
   const { mutate: deleteTransaction, isPending: isDeletingTx } = useDeleteTransaction();
   const { mutate: updateTransaction, isPending: isUpdatingTx } = useUpdateTransaction();
+
+  const currentHoldings = realtimeHoldingsData?.holdings ?? holdings;
+  const currentHoldingsSummary = realtimeHoldingsData?.summary ?? holdingsSummary;
+
+  useEffect(() => {
+    if (!id) return;
+    refetchPortfolio();
+    refetchHoldings();
+    refetchTransactions();
+  }, [id, refetchPortfolio, refetchHoldings, refetchTransactions]);
 
   const {
     register,
@@ -241,7 +253,7 @@ export default function PortfolioDetail() {
           <CardContent className='pt-6'>
             <p className='text-sm text-gray-500'>Tổng giá trị</p>
             <p className='text-2xl font-bold text-gray-900 mt-1'>
-              {formatCurrency(holdingsSummary?.totalMarketValueUsd ?? 0)}
+              {formatCurrency(currentHoldingsSummary?.totalMarketValueUsd ?? 0)}
             </p>
           </CardContent>
         </Card>
@@ -249,15 +261,15 @@ export default function PortfolioDetail() {
           <CardContent className='pt-6'>
             <p className='text-sm text-gray-500'>Tổng giá vốn</p>
             <p className='text-2xl font-bold text-gray-900 mt-1'>
-              {formatCurrency(holdingsSummary?.totalCostBasisUsd ?? 0)}
+              {formatCurrency(currentHoldingsSummary?.totalCostBasisUsd ?? 0)}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className='pt-6'>
-            <p className='text-sm text-gray-500'>Lãi/lỗ chưa thực hiện</p>
-            <p className={`text-2xl font-bold mt-1 ${getColorClass(holdingsSummary?.totalUnrealizedPnlUsd ?? 0)}`}>
-              {formatCurrency(holdingsSummary?.totalUnrealizedPnlUsd ?? 0)}
+            <p className='text-sm text-gray-500'>Lãi/lỗ</p>
+            <p className={`text-2xl font-bold mt-1 ${getColorClass(currentHoldingsSummary?.totalUnrealizedPnlUsd ?? 0)}`}>
+              {formatCurrency(currentHoldingsSummary?.totalUnrealizedPnlUsd ?? 0)}
             </p>
           </CardContent>
         </Card>
@@ -275,9 +287,9 @@ export default function PortfolioDetail() {
               <CardTitle>Tài sản hiện tại</CardTitle>
             </CardHeader>
             <CardContent>
-              {holdingsLoading ? (
+              {holdingsLoading && !currentHoldings ? (
                 <div className='text-center py-8'>Đang tải tài sản...</div>
-              ) : holdings && holdings.length > 0 ? (
+              ) : currentHoldings && currentHoldings.length > 0 ? (
                 <div className='overflow-x-auto'>
                   <table className='w-full text-sm'>
                     <thead>
@@ -287,23 +299,23 @@ export default function PortfolioDetail() {
                         <th className='text-right py-3 px-4 font-semibold text-gray-900'>Giá vốn TB</th>
                         <th className='text-right py-3 px-4 font-semibold text-gray-900'>Giá hiện tại</th>
                         <th className='text-right py-3 px-4 font-semibold text-gray-900'>Tổng giá trị</th>
-                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Lãi/lỗ chưa thực hiện</th>
+                        <th className='text-right py-3 px-4 font-semibold text-gray-900'>Lãi/lỗ</th>
                         <th className='text-right py-3 px-4 font-semibold text-gray-900'>Biến động 24h</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {holdings.map((holding) => (
+                      {currentHoldings.map((holding) => (
                         <tr key={holding.symbol} className='border-b border-gray-100 hover:bg-gray-50'>
                           <td className='py-3 px-4 font-medium text-gray-900'>{holding.symbol}</td>
                           <td className='text-right py-3 px-4 text-gray-600'>{holding.quantity.toFixed(4)}</td>
                           <td className='text-right py-3 px-4 text-gray-600'>{formatCurrency(holding.avgCost)}</td>
-                          <td className='text-right py-3 px-4 text-gray-600'>{formatCurrency(holding.currentPrice)}</td>
-                          <td className='text-right py-3 px-4 font-semibold text-gray-900'>{formatCurrency(holding.totalValue)}</td>
-                          <td className={`text-right py-3 px-4 font-semibold ${getColorClass(holding.unrealizedPnL)}`}>
-                            {formatCurrency(holding.unrealizedPnL)}
+                          <td className='text-right py-3 px-4 text-gray-600'>{formatUsdOrDash(holding.currentPrice)}</td>
+                          <td className='text-right py-3 px-4 font-semibold text-gray-900'>{formatUsdOrDash(holding.totalValue)}</td>
+                          <td className={`text-right py-3 px-4 font-semibold ${getColorClass(holding.unrealizedPnL ?? 0)}`}>
+                            {formatUsdOrDash(holding.unrealizedPnL)}
                           </td>
-                          <td className={`text-right py-3 px-4 font-semibold ${getColorClass(holding.change24h)}`}>
-                            {holding.change24h.toFixed(2)}%
+                          <td className={`text-right py-3 px-4 font-semibold ${getColorClass(holding.change24h ?? 0)}`}>
+                            {holding.change24h != null ? `${holding.change24h.toFixed(2)}%` : '—'}
                           </td>
                         </tr>
                       ))}

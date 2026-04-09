@@ -63,7 +63,7 @@
  *
  * /dashboard/trend:
  *   get:
- *     summary: Top tăng/giảm mạnh 24h trên thị trường (CoinGecko)
+ *     summary: Top tăng/giảm mạnh 24h trên thị trường (Binance Spot)
  *     tags: [Dashboard]
  *     security:
  *       - bearerAuth: []

@@ -7,6 +7,7 @@ import app from './app';
 import connectDB from './config/db';
 import { evaluateAlertsAndNotify } from './jobs/alertChecker.job';
 import { setupPriceSocket } from './realtime/price.socket';
+import { binanceRealtimeService } from './services/binanceRealtime.service';
 
 const PORT = process.env.PORT || 5000;
 const ALERT_CRON = process.env.ALERT_CRON || '*/5 * * * *';
@@ -21,8 +22,9 @@ const startServer = async () => {
   console.log(`⏱️  Alert checker cron: ${ALERT_CRON}`);
 
   const httpServer = createServer(app);
+  binanceRealtimeService.start();
   setupPriceSocket(httpServer);
-  console.log('🔌 WebSocket realtime price stream enabled');
+  console.log('🔌 WebSocket realtime price stream enabled (Binance Spot)');
 
   // Khởi động Express server
   httpServer.listen(PORT, () => {
