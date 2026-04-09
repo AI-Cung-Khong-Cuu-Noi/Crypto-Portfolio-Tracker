@@ -12,6 +12,9 @@ type BinanceTicker = {
     c?: string;
     P?: string;
   };
+  s?: string;
+  c?: string;
+  P?: string;
   result?: unknown;
   id?: number;
 };
@@ -69,7 +72,9 @@ class BinanceRealtimeService {
     this.ws.on('message', (raw) => {
       try {
         const parsed = JSON.parse(raw.toString()) as BinanceTicker;
-        const payload = parsed.data;
+        // `/ws` + SUBSCRIBE can return raw ticker payload at root,
+        // while combined streams return `{ stream, data }`.
+        const payload = parsed.data ?? parsed;
         if (!payload?.s) return;
         const symbol = this.toBaseSymbol(payload.s);
         if (!symbol) return;
