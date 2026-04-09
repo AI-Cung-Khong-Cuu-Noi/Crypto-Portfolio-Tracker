@@ -11,7 +11,7 @@ import { Card } from '../../components/ui/Card';
 import { Loader } from 'lucide-react';
 
 const forgotPasswordSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().email('Email không hợp lệ'),
 });
 
 type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>;
@@ -48,8 +48,8 @@ export default function ForgotPassword() {
           <div className='w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4'>
             <span className='text-green-600 text-xl'>✓</span>
           </div>
-          <h1 className='text-2xl font-bold text-gray-900 mb-2'>Check Your Email</h1>
-          <p className='text-gray-600'>We've sent a verification code to {getValues('email')}</p>
+          <h1 className='text-2xl font-bold text-gray-900 mb-2'>Kiểm tra email của bạn</h1>
+          <p className='text-gray-600'>Chúng tôi đã gửi mã xác thực đến {getValues('email')}</p>
         </div>
       </Card>
     );
@@ -59,8 +59,8 @@ export default function ForgotPassword() {
     <Card className='border-0 shadow-lg'>
       <div className='p-8'>
         <div className='text-center mb-8'>
-          <h1 className='text-3xl font-bold text-gray-900 mb-2'>Reset Password</h1>
-          <p className='text-gray-600'>Enter your email to receive reset instructions</p>
+          <h1 className='text-3xl font-bold text-gray-900 mb-2'>Quên mật khẩu</h1>
+          <p className='text-gray-600'>Nhập email để nhận mã đặt lại mật khẩu</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className='space-y-4'>
@@ -69,7 +69,7 @@ export default function ForgotPassword() {
             <Input
               id='email'
               type='email'
-              placeholder='you@example.com'
+              placeholder='ban@example.com'
               {...register('email')}
               className='mt-1'
             />
@@ -78,7 +78,7 @@ export default function ForgotPassword() {
 
           <Button type='submit' className='w-full' disabled={isPending}>
             {isPending ? <Loader className='mr-2 h-4 w-4 animate-spin' /> : null}
-            Send Reset Code
+            Gửi mã đặt lại
           </Button>
         </form>
 
@@ -87,7 +87,7 @@ export default function ForgotPassword() {
             onClick={() => navigate('/login')}
             className='text-blue-600 hover:text-blue-700 font-medium text-sm'
           >
-            Back to sign in
+            Quay lại đăng nhập
           </button>
         </div>
       </div>

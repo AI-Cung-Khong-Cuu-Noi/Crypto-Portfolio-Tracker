@@ -1,5 +1,9 @@
 import { ITransaction } from '../models/transaction.model';
-import { fetchUsdQuotesByCoinIds, resolveCoinGeckoId } from '../utils/coingecko.util';
+
+export type MarketQuote = {
+  usd: number | null;
+  usd_24h_change: number | null;
+};
 
 export type AggregatedPosition = {
   symbol: string;
@@ -114,33 +118,19 @@ export type HoldingWithMarket = AggregatedPosition & {
   change24hPercent: number | null;
   valueUsd: number | null;
   unrealizedPnlUsd: number | null;
+  /** Giữ tên field cũ; giá lấy từ Binance, không còn map CoinGecko */
   resolvedCoinGeckoId: string | null;
 };
 
-export async function enrichHoldingsWithMarket(
-  positions: AggregatedPosition[]
-): Promise<HoldingWithMarket[]> {
-  const resolved = await Promise.all(
-    positions.map(async (p) => ({
-      position: p,
-      id: await resolveCoinGeckoId(p.symbol, p.coinGeckoId),
-    }))
-  );
-
-  const ids = resolved.map((r) => r.id).filter((id): id is string => Boolean(id));
-  let quotes: Record<string, { usd?: number; usd_24h_change?: number }> = {};
-  try {
-    if (ids.length > 0) {
-      quotes = await fetchUsdQuotesByCoinIds(ids);
-    }
-  } catch {
-    quotes = {};
-  }
-
-  return resolved.map(({ position, id }) => {
-    const quote = id ? quotes[id] : undefined;
-    const price = quote?.usd ?? null;
-    const change24h = quote?.usd_24h_change ?? null;
+export function enrichHoldingsWithMarket(
+  positions: AggregatedPosition[],
+  priceBySymbolOverride: Map<string, MarketQuote> = new Map()
+): HoldingWithMarket[] {
+  return positions.map((position) => {
+    const symbol = String(position.symbol).toUpperCase();
+    const quote = priceBySymbolOverride.get(symbol) ?? { usd: null, usd_24h_change: null };
+    const price = quote.usd ?? null;
+    const change24h = quote.usd_24h_change ?? null;
     const valueUsd = price != null ? position.quantity * price : null;
     const unrealizedPnlUsd = valueUsd != null ? valueUsd - position.costBasisUsd : null;
 
@@ -150,7 +140,7 @@ export async function enrichHoldingsWithMarket(
       change24hPercent: change24h,
       valueUsd,
       unrealizedPnlUsd,
-      resolvedCoinGeckoId: id,
+      resolvedCoinGeckoId: null,
     };
   });
 }

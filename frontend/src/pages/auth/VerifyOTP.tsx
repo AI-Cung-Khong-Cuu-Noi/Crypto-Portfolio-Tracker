@@ -11,8 +11,8 @@ import { Card } from '../../components/ui/Card';
 import { Loader } from 'lucide-react';
 
 const verifyOTPSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  otp: z.string().length(6, 'OTP must be 6 digits'),
+  email: z.string().email('Email không hợp lệ'),
+  otp: z.string().length(6, 'Mã OTP phải gồm 6 chữ số'),
 });
 
 type VerifyOTPForm = z.infer<typeof verifyOTPSchema>;
@@ -30,7 +30,6 @@ export default function VerifyOTP() {
     register,
     handleSubmit,
     formState: { errors },
-    setValue,
   } = useForm<VerifyOTPForm>({
     resolver: zodResolver(verifyOTPSchema),
     defaultValues: { email },
@@ -63,8 +62,8 @@ export default function VerifyOTP() {
     <Card className='border-0 shadow-lg'>
       <div className='p-8'>
         <div className='text-center mb-8'>
-          <h1 className='text-3xl font-bold text-gray-900 mb-2'>Verify Email</h1>
-          <p className='text-gray-600'>Enter the 6-digit code sent to {email}</p>
+          <h1 className='text-3xl font-bold text-gray-900 mb-2'>Xác thực email</h1>
+          <p className='text-gray-600'>Nhập mã 6 chữ số đã gửi tới {email}</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className='space-y-4'>
@@ -81,7 +80,7 @@ export default function VerifyOTP() {
           </div>
 
           <div>
-            <Label htmlFor='otp'>Verification Code</Label>
+            <Label htmlFor='otp'>Mã xác thực</Label>
             <Input
               id='otp'
               placeholder='000000'
@@ -94,12 +93,12 @@ export default function VerifyOTP() {
 
           <Button type='submit' className='w-full' disabled={isVerifying}>
             {isVerifying ? <Loader className='mr-2 h-4 w-4 animate-spin' /> : null}
-            Verify
+            Xác thực
           </Button>
         </form>
 
         <div className='mt-6 text-center'>
-          <p className='text-sm text-gray-600 mb-2'>Didn't receive the code?</p>
+          <p className='text-sm text-gray-600 mb-2'>Không nhận được mã?</p>
           <Button
             type='button'
             onClick={handleResendOTP}
@@ -107,7 +106,7 @@ export default function VerifyOTP() {
             className='w-full'
             variant='outline'
           >
-            {countdown > 0 ? `Resend in ${countdown}s` : 'Resend OTP'}
+            {countdown > 0 ? `Gửi lại sau ${countdown}s` : 'Gửi lại OTP'}
           </Button>
         </div>
       </div>

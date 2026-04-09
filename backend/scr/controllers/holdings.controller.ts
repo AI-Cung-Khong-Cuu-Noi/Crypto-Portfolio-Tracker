@@ -6,6 +6,8 @@ import {
   aggregateHoldingsFromTransactions,
   enrichHoldingsWithMarket,
 } from '../services/holdings.service';
+import { binanceRealtimeService } from '../services/binanceRealtime.service';
+import { attachRealtimePriceHeaders, priceMeta } from '../utils/realtimeMeta.util';
 
 export const getHoldingsByPortfolio = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -18,9 +20,15 @@ export const getHoldingsByPortfolio = async (req: AuthRequest, res: Response, ne
       return res.status(404).json({ success: false, message: 'Không tìm thấy portfolio' });
     }
 
+    const pricedAt = new Date().toISOString();
+    attachRealtimePriceHeaders(res, pricedAt);
+
     const transactions = await Transaction.find({ portfolioId: portfolio._id }).sort({ date: 1 });
     const positions = aggregateHoldingsFromTransactions(transactions);
-    const holdings = await enrichHoldingsWithMarket(positions);
+    const realtimeQuotes = await binanceRealtimeService.getQuotesForSymbols(
+      positions.map((position) => position.symbol)
+    );
+    const holdings = enrichHoldingsWithMarket(positions, realtimeQuotes);
 
     const symbolsMissingPrice = holdings
       .filter((h) => h.currentPriceUsd == null)
@@ -41,6 +49,7 @@ export const getHoldingsByPortfolio = async (req: AuthRequest, res: Response, ne
           totalUnrealizedPnlUsd,
           symbolsMissingPrice,
         },
+        meta: priceMeta(pricedAt),
       },
     });
   } catch (error) {

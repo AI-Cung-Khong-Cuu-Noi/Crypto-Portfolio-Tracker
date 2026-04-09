@@ -12,6 +12,10 @@ export const useAlerts = () => {
   return useQuery({
     queryKey: ['alerts'],
     queryFn: alertsAPI.list,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 10000,
   });
 };
 

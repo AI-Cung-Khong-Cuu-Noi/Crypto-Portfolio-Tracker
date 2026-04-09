@@ -1,5 +1,6 @@
 import { ITransaction } from '../models/transaction.model';
 import { buyCost, sellProceedsUsd, aggregatePositionsAndRealized, enrichHoldingsWithMarket } from './holdings.service';
+import { binanceRealtimeService } from './binanceRealtime.service';
 
 export type SellLedgerLine = {
   transactionId: string;
@@ -271,8 +272,11 @@ export async function buildCoinPerformanceRows(
   }
 
   const positions = aggregatePositionsAndRealized(transactions).positions;
-  const withMarket =
-    options.includeMarket && positions.length > 0 ? await enrichHoldingsWithMarket(positions) : null;
+  let withMarket: ReturnType<typeof enrichHoldingsWithMarket> | null = null;
+  if (options.includeMarket && positions.length > 0) {
+    const quotes = await binanceRealtimeService.getQuotesForSymbols(positions.map((p) => p.symbol));
+    withMarket = enrichHoldingsWithMarket(positions, quotes);
+  }
   const marketBySymbol = new Map(
     (withMarket ?? []).map((h) => [
       h.symbol,

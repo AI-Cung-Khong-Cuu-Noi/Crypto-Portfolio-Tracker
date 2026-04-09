@@ -1,9 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePortfolios } from '../hooks/usePortfolio';
 import { useReportsByCoin, useReportsSummary, useReportsTaxRealized } from '../hooks/useReports';
-import { formatCurrency, getColorClass } from '../utils/format';
+import { formatCurrency, formatUsdOrDash, getColorClass } from '../utils/format';
 
 const toCsvCell = (value: string | number | null | undefined) => {
   const text = value === null || value === undefined ? '' : String(value);
@@ -16,11 +16,24 @@ const toCsvCell = (value: string | number | null | undefined) => {
 export default function Reports() {
   const [period, setPeriod] = useState<'DAY' | 'MONTH' | 'YEAR'>('MONTH');
   const [selectedPortfolio, setSelectedPortfolio] = useState<string>('all');
-  const { data: portfolios } = usePortfolios();
+  const { data: portfolios, refetch: refetchPortfolios } = usePortfolios();
   const portfolioId = selectedPortfolio === 'all' ? undefined : selectedPortfolio;
-  const { data: summary } = useReportsSummary(period, portfolioId);
-  const { data: taxRealized } = useReportsTaxRealized(portfolioId);
-  const { data: byCoin } = useReportsByCoin(portfolioId);
+  const { data: summary, refetch: refetchSummary } = useReportsSummary(period, portfolioId);
+  const { data: taxRealized, refetch: refetchTaxRealized } = useReportsTaxRealized(portfolioId);
+  const { data: byCoin, isLoading: byCoinLoading, refetch: refetchByCoin } = useReportsByCoin(portfolioId);
+
+  useEffect(() => {
+    refetchPortfolios();
+    refetchSummary();
+    refetchTaxRealized();
+    refetchByCoin();
+  }, [refetchPortfolios, refetchSummary, refetchTaxRealized, refetchByCoin]);
+
+  const totalUnrealizedPnlUsd = useMemo(() => {
+    const coins = byCoin?.coins;
+    if (!coins) return null;
+    return coins.reduce((sum, c) => sum + (c.unrealizedPnlUsd ?? 0), 0);
+  }, [byCoin?.coins]);
 
   const handleExportCsv = () => {
     const rows: string[] = [];
@@ -33,6 +46,11 @@ export default function Reports() {
     rows.push(`Danh mục,${toCsvCell(selectedPortfolio === 'all' ? 'Tất cả' : selectedPortfolio)}`);
     rows.push(`Tổng giao dịch,${toCsvCell(summary?.totals.tradeCount ?? 0)}`);
     rows.push(`Lãi lỗ đã thực hiện USD,${toCsvCell(summary?.totals.realizedPnlUsd ?? 0)}`);
+    rows.push(
+      `Tổng lãi lỗ chưa thực hiện USD (vị thế mở),${toCsvCell(
+        totalUnrealizedPnlUsd == null ? '' : totalUnrealizedPnlUsd
+      )}`
+    );
     rows.push(`Khối lượng mua USD,${toCsvCell(summary?.totals.buyVolumeUsd ?? 0)}`);
     rows.push(`Khối lượng bán USD,${toCsvCell(summary?.totals.sellVolumeUsd ?? 0)}`);
     rows.push('');
@@ -70,7 +88,9 @@ export default function Reports() {
     rows.push('');
 
     rows.push('Hiệu suất theo coin');
-    rows.push('Mã,Số giao dịch,Giá vốn USD,Lãi lỗ đã thực hiện (cộng dồn) USD,Số lượng hiện tại');
+    rows.push(
+      'Mã,Số giao dịch,Giá vốn USD,Lãi lỗ đã thực hiện (cộng dồn) USD,Lãi lỗ chưa thực hiện USD,Số lượng hiện tại'
+    );
     (byCoin?.coins ?? []).forEach((coin) => {
       rows.push(
         [
@@ -78,6 +98,7 @@ export default function Reports() {
           toCsvCell(coin.buyCount + coin.sellCount),
           toCsvCell(coin.costBasisUsd),
           toCsvCell(coin.realizedPnlUsdLifetime),
+          toCsvCell(coin.unrealizedPnlUsd ?? ''),
           toCsvCell(coin.currentQuantity),
         ].join(',')
       );
@@ -158,14 +179,17 @@ export default function Reports() {
       <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
         <Card>
           <CardHeader>
-            <CardTitle>Lãi / lỗ đã thực hiện</CardTitle>
+            <CardTitle>Tổng lãi/lỗ</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className='text-center py-12'>
-              <p className='text-gray-500 mb-4'>Theo kỳ đã chọn</p>
-              <p className={`text-3xl font-bold ${getColorClass(summary?.totals.realizedPnlUsd || 0)}`}>
-                {formatCurrency(summary?.totals.realizedPnlUsd || 0)}
-              </p>
+            <div className='text-center py-8'>
+              {byCoinLoading ? (
+                <p className='text-3xl font-bold text-gray-400'>Đang tải...</p>
+              ) : (
+                <p className={`text-3xl font-bold ${getColorClass(totalUnrealizedPnlUsd ?? 0)}`}>
+                  {formatCurrency(totalUnrealizedPnlUsd ?? 0)}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -175,7 +199,8 @@ export default function Reports() {
             <CardTitle>Tổng giao dịch</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className='text-center py-12'>
+            <div className='text-center py-8'>
+              <p className='text-sm text-gray-500 mb-2'>Trong kỳ đã chọn</p>
               <p className='text-3xl font-bold text-gray-900'>{summary?.totals.tradeCount || 0}</p>
               <p className='text-gray-500 mt-2'>giao dịch</p>
             </div>
@@ -183,23 +208,7 @@ export default function Reports() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Báo cáo thuế</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className='space-y-2'>
-            <p className='text-sm text-gray-500'>{taxRealized?.description}</p>
-            <p className={`text-xl font-semibold ${getColorClass(taxRealized?.totalRealizedPnlUsd || 0)}`}>
-              {formatCurrency(taxRealized?.totalRealizedPnlUsd || 0)}
-            </p>
-            <p className='text-xs text-gray-500'>
-              {taxRealized?.from ? new Date(taxRealized.from).toLocaleDateString('vi-VN') : '-'} –{' '}
-              {taxRealized?.to ? new Date(taxRealized.to).toLocaleDateString('vi-VN') : '-'}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      
 
       <Card>
         <CardHeader>
@@ -213,7 +222,7 @@ export default function Reports() {
                   <th className='text-left py-3 px-4 font-semibold text-gray-900'>Mã</th>
                   <th className='text-right py-3 px-4 font-semibold text-gray-900'>Giao dịch</th>
                   <th className='text-right py-3 px-4 font-semibold text-gray-900'>Giá vốn</th>
-                  <th className='text-right py-3 px-4 font-semibold text-gray-900'>Lãi/lỗ đã thực hiện</th>
+                  <th className='text-right py-3 px-4 font-semibold text-gray-900'>Lãi/lỗ</th>
                 </tr>
               </thead>
               <tbody>
@@ -223,14 +232,18 @@ export default function Reports() {
                       <td className='py-3 px-4 font-medium text-gray-900'>{coin.symbol}</td>
                       <td className='text-right py-3 px-4 text-gray-600'>{coin.buyCount + coin.sellCount}</td>
                       <td className='text-right py-3 px-4 text-gray-600'>{formatCurrency(coin.costBasisUsd)}</td>
-                      <td className={`text-right py-3 px-4 font-semibold ${getColorClass(coin.realizedPnlUsdLifetime)}`}>
-                        {formatCurrency(coin.realizedPnlUsdLifetime)}
+                      <td
+                        className={`text-right py-3 px-4 font-semibold ${
+                          coin.unrealizedPnlUsd != null ? getColorClass(coin.unrealizedPnlUsd) : 'text-gray-500'
+                        }`}
+                      >
+                        {formatUsdOrDash(coin.unrealizedPnlUsd ?? null)}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr className='border-b border-gray-100'>
-                    <td colSpan={4} className='text-center py-8 text-gray-500'>
+                    <td colSpan={5} className='text-center py-8 text-gray-500'>
                       Chưa có dữ liệu
                     </td>
                   </tr>

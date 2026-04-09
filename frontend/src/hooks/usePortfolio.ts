@@ -66,5 +66,7 @@ export const usePortfolioHoldings = (portfolioId: string | undefined) => {
     queryKey: ['holdings', portfolioId],
     queryFn: () => portfoliosAPI.getHoldings(portfolioId!),
     enabled: !!portfolioId,
+    staleTime: 0,
+    refetchInterval: 10_000,
   });
 };

@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { Portfolio } from '../models/portfolio.model';
 import { AuthRequest } from '../middlewares/auth.middleware';
+import { Transaction } from '../models/transaction.model';
 
 export const createPortfolio = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -85,7 +86,7 @@ export const updatePortfolio = async (req: AuthRequest, res: Response, next: Nex
 
 export const deletePortfolio = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const portfolio = await Portfolio.findOneAndDelete({
+    const portfolio = await Portfolio.findOne({
       _id: req.params.id,
       userId: req.user?.userId,
     });
@@ -93,6 +94,13 @@ export const deletePortfolio = async (req: AuthRequest, res: Response, next: Nex
     if (!portfolio) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy portfolio' });
     }
+
+    await Transaction.deleteMany({
+      portfolioId: portfolio._id,
+      userId: req.user?.userId,
+    });
+
+    await Portfolio.deleteOne({ _id: portfolio._id });
 
     res.status(200).json({
       success: true,

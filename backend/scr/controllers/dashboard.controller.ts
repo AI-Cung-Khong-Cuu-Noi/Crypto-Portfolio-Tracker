@@ -11,7 +11,9 @@ import {
   computePerformanceSeries,
   splitTopGainersLosers,
 } from '../services/dashboard.service';
-import { fetchUsdMarketsBy24hChange } from '../utils/coingecko.util';
+import { fetchUsd24hMarketMovers } from '../utils/binanceMarket.util';
+import { binanceRealtimeService } from '../services/binanceRealtime.service';
+import { attachRealtimePriceHeaders, priceMeta } from '../utils/realtimeMeta.util';
 
 async function loadTransactionsForScope(
   userId: string | undefined,
@@ -42,8 +44,14 @@ export const getDashboardSummary = async (req: AuthRequest, res: Response, next:
       return res.status(404).json({ success: false, message: 'Không tìm thấy portfolio' });
     }
 
+    const pricedAt = new Date().toISOString();
+    attachRealtimePriceHeaders(res, pricedAt);
+
     const { positions, totalRealizedPnlUsd } = aggregatePositionsAndRealized(transactions);
-    const holdings = await enrichHoldingsWithMarket(positions);
+    const realtimeQuotes = await binanceRealtimeService.getQuotesForSymbols(
+      positions.map((position) => position.symbol)
+    );
+    const holdings = enrichHoldingsWithMarket(positions, realtimeQuotes);
 
     const totalCostBasisUsd = holdings.reduce((sum, h) => sum + h.costBasisUsd, 0);
     const totalMarketValueUsd = holdings.reduce((sum, h) => sum + (h.valueUsd ?? 0), 0);
@@ -66,6 +74,7 @@ export const getDashboardSummary = async (req: AuthRequest, res: Response, next:
         holdingsCount: holdings.length,
         topGainers,
         topLosers,
+        meta: priceMeta(pricedAt),
       },
     });
   } catch (error) {
@@ -85,8 +94,14 @@ export const getDashboardAllocation = async (req: AuthRequest, res: Response, ne
       return res.status(404).json({ success: false, message: 'Không tìm thấy portfolio' });
     }
 
+    const pricedAt = new Date().toISOString();
+    attachRealtimePriceHeaders(res, pricedAt);
+
     const { positions } = aggregatePositionsAndRealized(transactions);
-    const holdings = await enrichHoldingsWithMarket(positions);
+    const realtimeQuotes = await binanceRealtimeService.getQuotesForSymbols(
+      positions.map((position) => position.symbol)
+    );
+    const holdings = enrichHoldingsWithMarket(positions, realtimeQuotes);
     const segments = buildAllocationSegments(holdings);
 
     res.status(200).json({
@@ -95,6 +110,7 @@ export const getDashboardAllocation = async (req: AuthRequest, res: Response, ne
         portfolioId: portfolioId ?? null,
         segments,
         totalMarketValueUsd: segments.reduce((s, x) => s + x.valueUsd, 0),
+        meta: priceMeta(pricedAt),
       },
     });
   } catch (error) {
@@ -116,6 +132,9 @@ export const getDashboardPerformance = async (req: AuthRequest, res: Response, n
       return res.status(404).json({ success: false, message: 'Không tìm thấy portfolio' });
     }
 
+    const pricedAt = new Date().toISOString();
+    attachRealtimePriceHeaders(res, pricedAt);
+
     const { points, note } = await computePerformanceSeries(transactions, days);
 
     res.status(200).json({
@@ -125,6 +144,7 @@ export const getDashboardPerformance = async (req: AuthRequest, res: Response, n
         days,
         points,
         note,
+        meta: priceMeta(pricedAt),
       },
     });
   } catch (error) {
@@ -136,16 +156,17 @@ export const getDashboardTrend = async (req: AuthRequest, res: Response, next: N
   try {
     const perPage = Math.min(100, Math.max(1, Number(req.query.perPage) || 10));
 
-    const [topGainers, topLosers] = await Promise.all([
-      fetchUsdMarketsBy24hChange('desc', perPage),
-      fetchUsdMarketsBy24hChange('asc', perPage),
-    ]);
+    const pricedAt = new Date().toISOString();
+    attachRealtimePriceHeaders(res, pricedAt);
+
+    const { topGainers, topLosers } = await fetchUsd24hMarketMovers(perPage);
 
     res.status(200).json({
       success: true,
       data: {
         topGainers,
         topLosers,
+        meta: priceMeta(pricedAt),
       },
     });
   } catch (error) {

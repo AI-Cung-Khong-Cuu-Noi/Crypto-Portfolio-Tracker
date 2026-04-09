@@ -1,32 +1,16 @@
 import { ITransaction } from '../models/transaction.model';
-import { fetchUsdQuotesByCoinIds, resolveCoinGeckoId } from '../utils/coingecko.util';
 import { aggregatePositionsAndRealized, HoldingWithMarket } from './holdings.service';
+import { binanceRealtimeService } from './binanceRealtime.service';
 
-export async function buildSymbolPriceLookup(
-  symbols: string[],
-  transactions: ITransaction[]
-): Promise<Map<string, number | null>> {
-  const hintBySymbol = new Map<string, string | undefined>();
-  for (const tx of transactions) {
-    const sym = String(tx.symbol).toUpperCase();
-    if (tx.coinGeckoId) {
-      hintBySymbol.set(sym, tx.coinGeckoId);
-    }
+export async function buildSymbolPriceLookup(symbols: string[]): Promise<Map<string, number | null>> {
+  if (symbols.length === 0) {
+    return new Map();
   }
-
-  const resolvedIds = await Promise.all(
-    symbols.map((sym) => resolveCoinGeckoId(sym, hintBySymbol.get(sym)))
-  );
-
-  const ids = resolvedIds.filter((id): id is string => Boolean(id));
-  const quotes = ids.length > 0 ? await fetchUsdQuotesByCoinIds(ids) : {};
-
+  const quotes = await binanceRealtimeService.getQuotesForSymbols(symbols);
   const priceBySymbol = new Map<string, number | null>();
-  symbols.forEach((sym, i) => {
-    const id = resolvedIds[i];
-    priceBySymbol.set(sym, id ? quotes[id]?.usd ?? null : null);
-  });
-
+  for (const sym of symbols) {
+    priceBySymbol.set(sym, quotes.get(sym)?.usd ?? null);
+  }
   return priceBySymbol;
 }
 
@@ -41,7 +25,7 @@ export async function computePerformanceSeries(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
   const uniqueSymbols = [...new Set(sorted.map((t) => String(t.symbol).toUpperCase()))];
-  const priceBySymbol = await buildSymbolPriceLookup(uniqueSymbols, sorted);
+  const priceBySymbol = await buildSymbolPriceLookup(uniqueSymbols);
 
   const points: Array<{ date: string; totalMarketValueUsd: number; totalCostBasisUsd: number }> =
     [];
@@ -74,7 +58,7 @@ export async function computePerformanceSeries(
   return {
     points,
     note:
-      'totalMarketValueUsd uses spot prices at request time applied to historical quantities (approximation).',
+      'totalMarketValueUsd uses Binance spot prices at request time applied to historical quantities (approximation).',
   };
 }
 

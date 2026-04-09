@@ -48,11 +48,12 @@ export interface Holding {
   symbol: string;
   quantity: number;
   avgCost: number;
-  currentPrice: number;
-  totalValue: number;
-  unrealizedPnL: number;
+  /** null khi chưa có giá thị trường (Binance) */
+  currentPrice: number | null;
+  totalValue: number | null;
+  unrealizedPnL: number | null;
   unrealizedPnLPercent: number;
-  change24h: number;
+  change24h: number | null;
 }
 
 export interface WatchlistItem {
