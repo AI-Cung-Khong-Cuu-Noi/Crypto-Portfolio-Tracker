@@ -3,6 +3,8 @@ import { Button } from '../components/ui/Button';
 import { useEffect, useMemo, useState } from 'react';
 import { usePortfolios } from '../hooks/usePortfolio';
 import { useReportsByCoin, useReportsSummary, useReportsTaxRealized } from '../hooks/useReports';
+import { useRealtimeDashboard } from '../hooks/useRealtimeDashboard';
+import { useRealtimePortfolioHoldings } from '../hooks/useRealtimePortfolioHoldings';
 import { formatCurrency, formatUsdOrDash, getColorClass } from '../utils/format';
 
 const toCsvCell = (value: string | number | null | undefined) => {
@@ -21,6 +23,8 @@ export default function Reports() {
   const { data: summary, refetch: refetchSummary } = useReportsSummary(period, portfolioId);
   const { data: taxRealized, refetch: refetchTaxRealized } = useReportsTaxRealized(portfolioId);
   const { data: byCoin, isLoading: byCoinLoading, refetch: refetchByCoin } = useReportsByCoin(portfolioId);
+  const { realtimeSummary, realtimeHoldings } = useRealtimeDashboard();
+  const realtimePortfolioHoldings = useRealtimePortfolioHoldings(portfolioId);
 
   useEffect(() => {
     refetchPortfolios();
@@ -35,6 +39,27 @@ export default function Reports() {
     return coins.reduce((sum, c) => sum + (c.unrealizedPnlUsd ?? 0), 0);
   }, [byCoin?.coins]);
 
+  const realtimeUnrealizedPnlUsd = useMemo(() => {
+    if (portfolioId) {
+      return realtimePortfolioHoldings?.summary?.totalUnrealizedPnlUsd ?? null;
+    }
+    return realtimeSummary?.totalUnrealizedPnlUsd ?? null;
+  }, [portfolioId, realtimePortfolioHoldings?.summary?.totalUnrealizedPnlUsd, realtimeSummary?.totalUnrealizedPnlUsd]);
+
+  const displayTotalUnrealizedPnlUsd = realtimeUnrealizedPnlUsd ?? totalUnrealizedPnlUsd;
+
+  const realtimeUnrealizedBySymbol = useMemo(() => {
+    const out: Record<string, number | null> = {};
+    const rows = portfolioId ? (realtimePortfolioHoldings?.holdings ?? []) : (realtimeHoldings ?? []);
+    for (const row of rows) {
+      const symbol = String(row.symbol).trim().toUpperCase();
+      if (!symbol) continue;
+      const unrealized = 'unrealizedPnL' in row ? row.unrealizedPnL : row.unrealizedPnlUsd;
+      out[symbol] = unrealized ?? null;
+    }
+    return out;
+  }, [portfolioId, realtimePortfolioHoldings?.holdings, realtimeHoldings]);
+
   const handleExportCsv = () => {
     const rows: string[] = [];
     const now = new Date();
@@ -48,7 +73,7 @@ export default function Reports() {
     rows.push(`Lãi lỗ đã thực hiện USD,${toCsvCell(summary?.totals.realizedPnlUsd ?? 0)}`);
     rows.push(
       `Tổng lãi lỗ chưa thực hiện USD (vị thế mở),${toCsvCell(
-        totalUnrealizedPnlUsd == null ? '' : totalUnrealizedPnlUsd
+        displayTotalUnrealizedPnlUsd == null ? '' : displayTotalUnrealizedPnlUsd
       )}`
     );
     rows.push(`Khối lượng mua USD,${toCsvCell(summary?.totals.buyVolumeUsd ?? 0)}`);
@@ -186,8 +211,8 @@ export default function Reports() {
               {byCoinLoading ? (
                 <p className='text-3xl font-bold text-gray-400'>Đang tải...</p>
               ) : (
-                <p className={`text-3xl font-bold ${getColorClass(totalUnrealizedPnlUsd ?? 0)}`}>
-                  {formatCurrency(totalUnrealizedPnlUsd ?? 0)}
+                <p className={`text-3xl font-bold ${getColorClass(displayTotalUnrealizedPnlUsd ?? 0)}`}>
+                  {formatCurrency(displayTotalUnrealizedPnlUsd ?? 0)}
                 </p>
               )}
             </div>
@@ -227,20 +252,26 @@ export default function Reports() {
               </thead>
               <tbody>
                 {byCoin?.coins && byCoin.coins.length > 0 ? (
-                  byCoin.coins.map((coin) => (
-                    <tr key={coin.symbol} className='border-b border-gray-100'>
-                      <td className='py-3 px-4 font-medium text-gray-900'>{coin.symbol}</td>
-                      <td className='text-right py-3 px-4 text-gray-600'>{coin.buyCount + coin.sellCount}</td>
-                      <td className='text-right py-3 px-4 text-gray-600'>{formatCurrency(coin.costBasisUsd)}</td>
-                      <td
-                        className={`text-right py-3 px-4 font-semibold ${
-                          coin.unrealizedPnlUsd != null ? getColorClass(coin.unrealizedPnlUsd) : 'text-gray-500'
-                        }`}
-                      >
-                        {formatUsdOrDash(coin.unrealizedPnlUsd ?? null)}
-                      </td>
-                    </tr>
-                  ))
+                  byCoin.coins.map((coin) => {
+                    const symbol = String(coin.symbol).trim().toUpperCase();
+                    const realtimeUnrealized = realtimeUnrealizedBySymbol[symbol];
+                    const displayUnrealized = realtimeUnrealized ?? coin.unrealizedPnlUsd ?? null;
+
+                    return (
+                      <tr key={coin.symbol} className='border-b border-gray-100'>
+                        <td className='py-3 px-4 font-medium text-gray-900'>{coin.symbol}</td>
+                        <td className='text-right py-3 px-4 text-gray-600'>{coin.buyCount + coin.sellCount}</td>
+                        <td className='text-right py-3 px-4 text-gray-600'>{formatCurrency(coin.costBasisUsd)}</td>
+                        <td
+                          className={`text-right py-3 px-4 font-semibold ${
+                            displayUnrealized != null ? getColorClass(displayUnrealized) : 'text-gray-500'
+                          }`}
+                        >
+                          {formatUsdOrDash(displayUnrealized)}
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr className='border-b border-gray-100'>
                     <td colSpan={5} className='text-center py-8 text-gray-500'>

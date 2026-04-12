@@ -9,17 +9,31 @@ type DashboardSocketPayload = DashboardSummary & {
   ts: string;
   portfolioId: string | null;
   allocation?: AllocationData[];
+  holdings?: RealtimeDashboardHolding[];
+};
+
+type RealtimeDashboardHolding = {
+  symbol: string;
+  quantity: number;
+  costBasisUsd: number;
+  averageCostUsd: number;
+  currentPriceUsd: number | null;
+  change24hPercent: number | null;
+  valueUsd: number | null;
+  unrealizedPnlUsd: number | null;
 };
 
 export function useRealtimeDashboard() {
   const token = useAuthStore((s) => s.token);
   const [realtimeSummary, setRealtimeSummary] = useState<DashboardSummary | null>(null);
   const [realtimeAllocation, setRealtimeAllocation] = useState<AllocationData[] | null>(null);
+  const [realtimeHoldings, setRealtimeHoldings] = useState<RealtimeDashboardHolding[] | null>(null);
 
   useEffect(() => {
     if (!token) {
       setRealtimeSummary(null);
       setRealtimeAllocation(null);
+      setRealtimeHoldings(null);
       return;
     }
 
@@ -41,6 +55,7 @@ export function useRealtimeDashboard() {
         topLosers: payload.topLosers,
       });
       setRealtimeAllocation(payload.allocation ?? null);
+      setRealtimeHoldings(payload.holdings ?? null);
     };
 
     const subscribe = () => {
@@ -62,5 +77,5 @@ export function useRealtimeDashboard() {
     };
   }, [token]);
 
-  return { realtimeSummary, realtimeAllocation };
+  return { realtimeSummary, realtimeAllocation, realtimeHoldings };
 }
